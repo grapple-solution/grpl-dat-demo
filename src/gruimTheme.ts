@@ -109,27 +109,27 @@ button[class*="bg-primary"] {
    and icons; the row actions carry none and inherit this theme's near-white.
    Either way they are unreadable, so the panels are restyled wholesale. This
    project's own markup has no bg-white, so the match stays with the module. */
-div[class*="bg-white"][class*="absolute"] {
+[class*="bg-white"][class*="absolute"] {
   background: rgb(var(--dat-surface)) !important;
   border: 1px solid rgb(var(--dat-line)) !important;
   border-radius: 0.5rem;
   box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
 }
 
-div[class*="bg-white"][class*="absolute"] span,
-div[class*="bg-white"][class*="absolute"] button,
-div[class*="bg-white"][class*="absolute"] [class*="text-gray-600"],
-div[class*="bg-white"][class*="absolute"] [class*="text-gray-700"] {
+[class*="bg-white"][class*="absolute"] span,
+[class*="bg-white"][class*="absolute"] button,
+[class*="bg-white"][class*="absolute"] [class*="text-gray-600"],
+[class*="bg-white"][class*="absolute"] [class*="text-gray-700"] {
   color: rgb(var(--dat-ink)) !important;
 }
 
-div[class*="bg-white"][class*="absolute"] svg,
-div[class*="bg-white"][class*="absolute"] [class*="text-gray-400"] {
+[class*="bg-white"][class*="absolute"] svg,
+[class*="bg-white"][class*="absolute"] [class*="text-gray-400"] {
   color: rgb(var(--dat-muted)) !important;
 }
 
-div[class*="bg-white"][class*="absolute"] > span:hover,
-div[class*="bg-white"][class*="absolute"] > button:hover {
+[class*="bg-white"][class*="absolute"] span:hover,
+[class*="bg-white"][class*="absolute"] button:hover {
   background: rgb(var(--dat-accent) / 0.2) !important;
 }
 
@@ -167,18 +167,22 @@ button[class*="bg-primary"] path {
   stroke: currentColor;
 }
 
-.dat-select-all-progress [class*="text-gray-600"] {
-  color: rgb(var(--dat-muted)) !important;
-}
-
-.dat-select-all-progress [class*="bg-gray-200"] {
-  background: rgb(var(--dat-line)) !important;
+[class*="bg-gray-200"][class*="rounded-full"] {
+  background: rgb(var(--dat-line-strong)) !important;
   box-shadow: none !important;
 }
 
-.dat-select-all-progress [class*="bg-primary"] {
+[class*="bg-gray-200"][class*="rounded-full"] > [class*="bg-primary"] {
   background: rgb(var(--dat-accent)) !important;
   color: rgb(var(--dat-accent-ink)) !important;
+}
+
+div[class*="text-gray-600"]:has(+ [class*="bg-gray-200"][class*="rounded-full"]) {
+  color: rgb(var(--dat-muted)) !important;
+}
+
+div[aria-modal="true"] > div > div[aria-hidden="true"] {
+  background: rgb(var(--dat-bg) / 0.55) !important;
 }
 
 /* The pager's white band is a wrapper around the nav, not the nav itself. */
