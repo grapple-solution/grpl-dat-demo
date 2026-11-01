@@ -16,7 +16,7 @@ fi
 export SVELTE_APP_API_URL=$(echo "${SVELTE_APP_API_URL}" | sed 's,/$,,')
 echo "SVELTE_APP_API_URL = ${SVELTE_APP_API_URL}"
 
-# The search tree reads layer one directly; see the note in src/api.ts.
+# An optional override can bypass the cached API for tree options.
 if [ -z "${SVELTE_APP_TREE_API_URL:-}" ] && [ -n "${SVELTE_APP_TREE_API_ENDPOINT:-}" ]; then
     export SVELTE_APP_TREE_API_URL="$(echo "${SVELTE_APP_TREE_API_ENDPOINT}" | sed 's,/$,,')"
 fi

@@ -190,7 +190,7 @@ dev:
     labelSelector:
       app.kubernetes.io/name: grapi
       grpl.io/resourceName: ${APP_NAME}-gras-grapi
-    devImage: grpl/loopback:0.4.28.pr-460
+    devImage: grpl/loopback:0.4.28
     env:
       - name: DEV
         value: "true"
@@ -231,7 +231,7 @@ dev:
     labelSelector:
       app.kubernetes.io/name: grapi
       grpl.io/resourceName: ${APP_NAME}-grascache-grapi
-    devImage: grpl/loopback:0.4.28.pr-460
+    devImage: grpl/loopback:0.4.28
     env:
       - name: DEV
         value: "true"
