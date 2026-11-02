@@ -16,7 +16,7 @@ grases:
       name: dat-demo
       runimages:
         image: grpl/loopback
-        tag: "0.4.28.pr-460"
+        tag: "0.4.28"
       discoveredrepos: true
       ingress: true
       ssl: true
@@ -27,6 +27,8 @@ grases:
         - dat-demo-db-mysql-account-root
         - dat-sqlcontrollers
       env:
+        - name: RestDefaultLimit
+          value: "1000"
         - name: host
           value: "dat-demo-db-mysql"
         - name: port
@@ -74,7 +76,7 @@ grases:
         - name: init-db
           spec:
             name: init-db
-            image: grpl/grpl-dat-demo-data:d998817
+            image: grpl/grpl-dat-demo-data:dev
             imagePullPolicy: Always
             env:
               - name: host
@@ -164,7 +166,7 @@ grases:
       name: dat-demo-cache
       runimages:
         image: grpl/loopback
-        tag: "0.4.28.pr-460"
+        tag: "0.4.28"
       discoveredrepos: false
       ingress: true
       ssl: true
@@ -174,6 +176,9 @@ grases:
       extraSecrets:
         - dat-layer2-config
         - dat-demo-redis-account-default
+      env:
+        - name: RestDefaultLimit
+          value: "1000"
       initContainers:
         - name: init-redis
           spec:
@@ -231,6 +236,21 @@ grases:
       prerelationpatches: []
       prepatches: []
       prediscoverypatches: []
+    gruim:
+      name: dat-demo-cache
+      runimages:
+        image: grpl/gruim
+        tag: "0.3.64.pr-197"
+      ssl: true
+      sslissuer: letsencrypt-grapple-demo
+      autoscaling:
+        maxReplicas: 1
+      style: '{"colors":{"primary":"#1451cb"}}'
+      config: '{"global":{"fetch-page-size":500,"max-records":5000}}'
+      additionalpackages: ""
+      custommodules: []
+      prepatches: []
+      postpatches: []
 replicaCount: 1
 image:
   repository: grpl/grpl-dat-demo

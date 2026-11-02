@@ -8,7 +8,7 @@
 
   const mountDatecode2 = async (): Promise<void> => {
     try {
-      const { default: Datecode2 } = await import("App/Datecode2");
+      const { default: Datecode2 } = await import("AppCache/dsearchtreeDatecode2");
 
       if (table) {
         table.innerHTML = "";

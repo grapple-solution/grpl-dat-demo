@@ -10,10 +10,8 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 - A browse tab that embeds the layer-one gruim admin module for `datecode2`
 
 Vehicle queries go through the Redis-backed layer-two API, which caches layer
-one's OpenAPI proxy and serves the MCP endpoint. The search tree's option lists
-address layer one directly: layer two's generated client repeats the `where`
-parameter on SQL controller paths, so a positional call drops `sqlParams` and
-every lookup comes back empty.
+one's OpenAPI proxy and serves the MCP endpoint. Search-tree options, fuzzy
+search and vehicle lists all use this cache layer.
 
 ## Project structure
 
@@ -76,15 +74,14 @@ Requirements: Node.js 22 and pnpm 9.15.9.
 
 ```sh
 cp .env.example .env
-# When the APIs run locally, also set:
-# SVELTE_APP_TREE_API_URL=http://localhost:3333
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
 The frontend is available at <http://localhost:4000>.
 `SVELTE_APP_API_URL` must point to the cached API including its `/dsearchtree`
-prefix; `SVELTE_APP_TREE_API_URL` points to layer one without a path prefix.
+prefix. `SVELTE_APP_TREE_API_URL` is an optional direct-API override and is
+empty by default.
 
 ## Complete Docker setup
 
@@ -101,23 +98,18 @@ layer-two proxy at <http://localhost:3334>, and the demo UI at
 controllers and can take approximately two minutes. Layer two uses layer one's
 internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
-The browse tab loads `App/Datecode2` from the layer-one gruim over module
+The browse tab loads `AppCache/dsearchtreeDatecode2` from the cache-layer gruim over module
 federation, and the module is imported on demand so the tab can explain itself
 when the remote is absent, as in local Docker runs. Vehicle queries go to the
-cached grapi through the `/dsearchtree` prefix; the search tree's option lists
-go straight to layer one on `SVELTE_APP_TREE_API_URL`, for the reason given
-under [Scope](#scope).
+cached grapi through the `/dsearchtree` prefix, including the search-tree
+option lists.
 
 ## API behavior
 
-In `grpl/loopback:0.4.25`, a SQL controller whose query carries no `${...}`
-placeholder generates a method parameter that is never decorated for dependency
-injection, so every request fails with 500. This affects `vehicleTypes`,
-`brands`, `modelRangeByVehicleType`, `gearboxTypes` and `bodyTypes` from the
-original command, while every parameterised controller works. The chart
-therefore declares `vehicleTypes` with a `FZA like "${FZA}"` filter and the UI
-calls it with `%`; it falls back to the five known DAT categories if the call
-still fails.
+Both API layers use `grpl/loopback:0.4.28`. This release preserves SQL-controller
+parameters through the cache layer, prevents duplicate `where` parameters and
+applies fuzzy matching before pagination. `RestDefaultLimit=1000` gives
+unpaginated REST list calls a safe default on both layers.
 
 The option lists behind HST, OTG, HT and UT are search driven. They query from
 the second character, debounced by 250 ms, and the previous request is aborted
@@ -127,12 +119,10 @@ abandon the range scan and read the whole index, which measured 1.324 s against
 0.021 s for the same search. The matching indexes are created beside the seed,
 only when absent.
 
-Fuzzy search uses `/dsearchtrees/datecode2s/fuzzy/{searchTerm}` on layer one and
+Fuzzy search uses
 `/dsearchtree/dsearchtrees/datecode2s/fuzzy/{searchTerm}` through the cache
-prefix. Its configuration must include `databaseName: dsearchtree`; otherwise
-the generated controller produces the invalid table name `.datecode2`. The
-The client sends the search terms in the repository filter and disables the
-unbounded raw query, so the criteria, limit and offset are applied. The UI
+prefix. Its configuration includes `databaseName: dsearchtree`. The client
+sends search terms, criteria, limit and offset in the repository filter. The UI
 pages fuzzy results at 100 rows and runs a matching count query
 once per search, so both the current range and the total number of results are
 shown without loading the complete result set.
@@ -150,7 +140,7 @@ kubectl -n <namespace> exec deploy/<release>-gras-grapi-devspace -c grapi \
   -- touch dist/index.js
 ```
 
-Two changes keep requests away from that ceiling.
+Three safeguards keep requests away from that ceiling.
 
 The UI asks for one page at a time. A single vehicle type matches 152,070 rows,
 so the result table pages at 100 and shows the true total beside the range.
@@ -170,6 +160,9 @@ bar shows the loaded and total ID count. The gruim image also uses `dateCode` in
 record actions and excludes the generated `globalSearch` column from update
 payloads; no project-specific gruim patch is required.
 
+Both grapi layers also set `RestDefaultLimit=1000`, so a REST list request
+without pagination cannot materialise the entire table.
+
 ## Grapple cluster development
 
 ```sh
@@ -184,16 +177,15 @@ DevSpace forwards the demo UI to port `4000`, layer-one grapi to `3000`, the
 cached grapi to `3001`, and gruim to `8080`.
 
 Layer one serves MySQL. The `grascache` layer consumes layer one's OpenAPI
-document through its ingress, caches responses in Redis and enables MCP. Its
+document, caches responses in Redis and enables MCP. Its
 datasource is named `redis` rather than `redisDS` because a Crossplane
 `ManagedDataSource` name has to be an RFC 1123 subdomain, and an uppercase
 letter makes the release fail.
 
-The cache layer carries no gruim of its own. Its OpenAPI spec duplicates the
-`where` parameter on every SQL controller path, which fails gruim's Swagger
-validation outright and, through the generated client, silently empties the
-option lists. Both are generator bugs; until they are fixed the browse tab loads
-`App/Datecode2` from layer one.
+The cache layer has its own gruim. The browse tab loads
+`AppCache/dsearchtreeDatecode2` from it, while all vehicle-search API calls use
+the cache layer. After an API upgrade, flush Redis so responses cached by an older
+version are not retained for the configured 100-minute TTL.
 
 Helm's own commands need the cluster lookups disabled to run offline, in this
 chart and in the other Grapple demos alike:

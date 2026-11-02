@@ -34,7 +34,7 @@ export type Criteria = {
   utb: string;
 };
 
-// Use layer one for SQL options because the cached client drops sqlParams.
+// Tree options use the cache API unless an override is configured.
 const cacheUrl = (process.env.SVELTE_APP_API_URL || "").replace(/\/$/, "");
 const treeUrl = (process.env.SVELTE_APP_TREE_API_URL || "").replace(/\/$/, "") || cacheUrl;
 
@@ -79,7 +79,7 @@ const KNOWN_VEHICLE_TYPES: Option[] = [
 
 export const loadVehicleTypes = async (): Promise<Option[]> => {
   try {
-    const options = await sqlOptions("/vehicleTypes", { FZA: "%" }, "FZA", "FZAB");
+    const options = await sqlOptions("/vehicleTypes", {}, "FZA", "FZAB");
     if (options.length) return options.map((option) =>
       KNOWN_VEHICLE_TYPES.find(({ value }) => value === option.value) ?? option,
     );
