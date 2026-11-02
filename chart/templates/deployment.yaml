@@ -75,6 +75,11 @@ spec:
                 configMapKeyRef:
                   name: "{{ .Release.Namespace }}-{{ .Release.Name }}-gras-gruim-muim"
                   key: remoteentry
+            - name: SVELTE_APP_CACHE_REMOTE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: "{{ .Release.Namespace }}-{{ .Release.Name }}-grascache-gruim-muim"
+                  key: remoteentry
             - name: SVELTE_APP_API_ENDPOINT
               valueFrom:
                 configMapKeyRef:

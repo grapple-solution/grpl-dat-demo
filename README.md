@@ -98,7 +98,7 @@ layer-two proxy at <http://localhost:3334>, and the demo UI at
 controllers and can take approximately two minutes. Layer two uses layer one's
 internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
-The browse tab loads `App/Datecode2` from the layer-one gruim over module
+The browse tab loads `AppCache/dsearchtreeDatecode2` from the cache-layer gruim over module
 federation, and the module is imported on demand so the tab can explain itself
 when the remote is absent, as in local Docker runs. Vehicle queries go to the
 cached grapi through the `/dsearchtree` prefix, including the search-tree
@@ -182,9 +182,9 @@ datasource is named `redis` rather than `redisDS` because a Crossplane
 `ManagedDataSource` name has to be an RFC 1123 subdomain, and an uppercase
 letter makes the release fail.
 
-The cache layer carries no gruim of its own. The browse tab loads
-`App/Datecode2` from layer one, while all vehicle-search API calls use the
-cache. After an API upgrade, flush Redis so responses cached by an older
+The cache layer has its own gruim. The browse tab loads
+`AppCache/dsearchtreeDatecode2` from it, while all vehicle-search API calls use
+the cache layer. After an API upgrade, flush Redis so responses cached by an older
 version are not retained for the configured 100-minute TTL.
 
 Helm's own commands need the cluster lookups disabled to run offline, in this
