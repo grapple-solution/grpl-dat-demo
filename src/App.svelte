@@ -3,6 +3,7 @@
   import TreeSearch from "./TreeSearch.svelte";
   import FuzzySearch from "./FuzzySearch.svelte";
   import BrowseTable from "./BrowseTable.svelte";
+  import DropdownPaginationDemo from "./DropdownPaginationDemo.svelte";
   import { loadVehicleTypes, errorMessage, type Option } from "./api";
 
   type View = "tree" | "fuzzy" | "browse";
@@ -68,6 +69,7 @@
           <h2 id="browse-title" class="text-3xl font-bold tracking-tight">Vehicle catalogue</h2>
           <p class="mt-2 text-app-muted">Browse, filter and manage all available DAT vehicle records.</p>
         </div>
+        <DropdownPaginationDemo />
         <BrowseTable />
       </section>
     {/if}

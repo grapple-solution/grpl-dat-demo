@@ -8,18 +8,89 @@
 // follows the page into dark mode without a second set of values.
 export const adminModuleCss = `
   color: rgb(var(--dat-ink));
+  /* svelte-select 5 reads kebab-case custom properties, and it redefines the
+     old camelCase names from them on its own root -- so a camelCase value set
+     from out here is shadowed before it reaches the control or the list. */
   --background: rgb(var(--dat-surface));
-  --borderFocusColor: rgb(var(--dat-accent));
-  --borderHoverColor: rgb(var(--dat-line-strong));
-  --disabledBackground: rgb(var(--dat-sunken));
-  --disabledColor: rgb(var(--dat-muted));
-  --inputColor: rgb(var(--dat-ink));
-  --itemColor: rgb(var(--dat-ink));
-  --itemHoverBG: rgb(var(--dat-accent-soft));
-  --itemIsActiveBG: rgb(var(--dat-accent-soft));
-  --listBackground: rgb(var(--dat-surface));
-  --placeholderColor: rgb(var(--dat-muted));
-  --selectedItemColor: rgb(var(--dat-ink));
+  --border: 1px solid rgb(var(--dat-line));
+  --border-hover: 1px solid rgb(var(--dat-line-strong));
+  --border-focused: 1px solid rgb(var(--dat-accent));
+  --chevron-color: rgb(var(--dat-muted));
+  --clear-select-color: rgb(var(--dat-muted));
+  --disabled-background: rgb(var(--dat-sunken));
+  --disabled-color: rgb(var(--dat-muted));
+  --group-title-color: rgb(var(--dat-muted));
+  --input-color: rgb(var(--dat-ink));
+  --item-color: rgb(var(--dat-ink));
+  --item-hover-bg: rgb(var(--dat-accent-soft));
+  --item-hover-color: rgb(var(--dat-ink));
+  --item-is-active-bg: rgb(var(--dat-accent-soft));
+  --item-is-active-color: rgb(var(--dat-ink));
+  --item-is-not-selectable-color: rgb(var(--dat-muted));
+  --list-background: rgb(var(--dat-surface));
+  --list-border: 1px solid rgb(var(--dat-line));
+  --list-empty-color: rgb(var(--dat-muted));
+  --list-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+  --multi-item-bg: rgb(var(--dat-sunken));
+  --multi-item-color: rgb(var(--dat-ink));
+  --multi-item-clear-icon-color: rgb(var(--dat-muted));
+  /* A selected label is the whole concatenated row. The chip is uncapped by
+     default, so it stretches the control past the page; its text already
+     ellipsizes once it has a width to ellipsize into. */
+  --multi-max-width: 100%;
+  --placeholder-color: rgb(var(--dat-muted));
+  --selected-item-color: rgb(var(--dat-ink));
+}
+
+/* The exposed module carries only its component styles: gruim imports its
+   Tailwind sheet from its own entry, which a federated host never loads. The
+   layout classes in the module's markup -- max-w-lg, flex, flex-1 -- are
+   therefore inert here, which is what lets a long selected label stretch the
+   dropdown across the page. Give the search wrapper the size its classes
+   intend, and let the chain below it shrink. */
+.search-input {
+  display: flex;
+  align-items: center;
+  max-width: 32rem;
+}
+
+.search-input > div {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The module wants a wide list over its narrow field -- its own rule says
+   min-width: 1024px, through a class name svelte-select 4 used -- but v5 sizes
+   the list inline from the field's width. Restore the intent, keep it inside
+   the viewport, and let a row wrap instead of ending in an ellipsis: one
+   option is a whole vehicle record. */
+.search-input .svelte-select-list {
+  width: min(64rem, calc(100vw - 3rem)) !important;
+}
+
+.search-input .svelte-select-list .item {
+  height: auto !important;
+  line-height: 1.4 !important;
+  padding: 0.5rem 1rem !important;
+  white-space: normal !important;
+}
+
+/* The module sets its own white list background through the same camelCase
+   property, so the list is left on svelte-select's white default. The
+   variables above fix the open list; these two cover what it hard-codes. */
+.svelte-select-list {
+  background: rgb(var(--dat-surface)) !important;
+  border: 1px solid rgb(var(--dat-line)) !important;
+}
+
+.svelte-select-list .item:not(.not-selectable) {
+  color: rgb(var(--dat-ink)) !important;
+}
+
+/* "Load more" is a Tailwind button inside the list, and its hover reaches for
+   a near-white grey like the rest of the module's hover states. */
+.svelte-select-list button[class*="hover:bg-gray-100"]:hover {
+  background: rgb(var(--dat-accent) / 0.2) !important;
 }
 
 #admin-list-table {
