@@ -27,7 +27,7 @@
 
 <main class="min-h-screen bg-app-bg text-app-ink antialiased">
   <header class="sticky top-0 z-20 border-b border-app-line bg-app-bg shadow-sm">
-    <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-4 px-6 py-4">
+    <div class="flex w-full flex-wrap items-center gap-x-6 gap-y-4 px-6 py-4">
       <div class="flex items-center gap-3">
         <span class="grid h-9 w-9 place-items-center rounded-xl bg-app-accent text-sm font-bold text-app-accent-ink">DAT</span>
         <div class="leading-tight">
@@ -50,7 +50,7 @@
     </div>
   </header>
 
-  <div class="mx-auto max-w-7xl px-6 py-10">
+  <div class="w-full px-6 py-10">
     {#if startupError}
       <div role="alert" class="mb-8 flex items-start gap-3 rounded-xl border border-app-danger/30 bg-app-danger-soft px-4 py-3 text-sm text-app-danger">
         <span class="mt-0.5 font-semibold">Vehicle data is unavailable</span>
