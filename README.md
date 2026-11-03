@@ -7,11 +7,11 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 - Cascading vehicle search: `FZA → HST → OTG → HT → UT`
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
-- A browse tab that embeds the layer-one gruim admin module for `datecode2`
+- A browse tab that embeds the cache-layer gruim admin module for `datecode2`
 
 Vehicle queries go through the Redis-backed layer-two API, which caches layer
-one's OpenAPI proxy and serves the MCP endpoint. Search-tree options, fuzzy
-search and vehicle lists all use this cache layer.
+one's OpenAPI proxy. Search-tree options, fuzzy search and vehicle lists all use
+this cache layer.
 
 ## Project structure
 
@@ -26,7 +26,8 @@ grpl-dat-demo/
 │   ├── gras/
 │   │   ├── grapi/          # Layer-one extensions and injection documentation
 │   │   └── gruim/          # Layer-one generated admin module
-│   └── grascache/          # Cache-layer extensions
+│   └── grascache/
+│       └── gruim/          # Cache-layer generated admin module
 ├── src/                    # Svelte vehicle-search application
 ├── tests/                  # Playwright UI tests
 ├── docker-compose.yaml     # Local two-layer API setup
@@ -45,8 +46,9 @@ loaded. The `init-db` container only seeds when the table is empty, so a restart
 costs nothing; a first load takes up to several minutes, depending on the
 cluster. Database credentials are generated into the
 `dat-demo-db-mysql-account-root` secret, so none of them belong in a file here.
-Deploying under a different namespace or domain requires changing the two
-layer-one ingress URLs under `grases.grascache.grapi` in `chart/values.yaml`.
+The cache layer reaches layer one through the internal
+`http://gras-grapi:3000/openapi.json` service URL, so deploying under another
+namespace or domain does not require an ingress URL change.
 
 **With Docker Compose, an external DAT database and Redis.** Compose starts the
 two APIs and the frontend but neither data service, so `.env` has to point at
@@ -63,10 +65,10 @@ both:
 `.env` is git-ignored. Never commit a DAT database or Redis password, and rotate
 anything that has been shared in plain text.
 
-Everything that is not environment specific lives in `chart/values.yaml`: the
-datasource shape, discovery and REST CRUD configuration, the fuzzy search
-configuration, the nine SQL controllers, and the bulk-fetch bounds described
-under [Staying inside the memory budget](#staying-inside-the-memory-budget).
+The Grapple backend configuration lives in `chart/values.yaml`: the datasource
+shape, discovery and REST CRUD configuration, the fuzzy search configuration,
+and the nine SQL controllers. The generated admin module receives its
+bulk-operation configuration in `src/BrowseTable.svelte`.
 
 ## Local frontend development
 
@@ -81,7 +83,8 @@ pnpm dev
 The frontend is available at <http://localhost:4000>.
 `SVELTE_APP_API_URL` must point to the cached API including its `/dsearchtree`
 prefix. `SVELTE_APP_TREE_API_URL` is an optional direct-API override and is
-empty by default.
+empty by default. The All vehicles tab additionally requires the generated
+cache-layer gruim remote, which this frontend-only workflow does not start.
 
 ## Complete Docker setup
 
@@ -98,11 +101,12 @@ layer-two proxy at <http://localhost:3334>, and the demo UI at
 controllers and can take approximately two minutes. Layer two uses layer one's
 internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
-The browse tab loads `AppCache/dsearchtreeDatecode2` from the cache-layer gruim over module
-federation, and the module is imported on demand so the tab can explain itself
-when the remote is absent, as in local Docker runs. Vehicle queries go to the
-cached grapi through the `/dsearchtree` prefix, including the search-tree
-option lists.
+Docker Compose does not start either gruim service. The browse tab loads
+`AppCache/dsearchtreeDatecode2` from the cache-layer gruim over module
+federation, so it is unavailable in this standalone Docker setup. The module is
+imported on demand and the tab reports a clear error when the remote is absent.
+Vehicle queries still go to the cached grapi through the `/dsearchtree` prefix,
+including the search-tree option lists.
 
 ## API behavior
 
@@ -145,20 +149,19 @@ Three safeguards keep requests away from that ceiling.
 The UI asks for one page at a time. A single vehicle type matches 152,070 rows,
 so the result table pages at 100 and shows the true total beside the range.
 
-gruim loads "Select all" and exports in pages instead of sending one unlimited
-request. They stop at the configured safety ceiling and warn that the user must
-narrow the filter to process the remaining records:
+gruim loads "Select all" and exports in stable pages instead of sending one
+unlimited request. The browse module configures the following values:
 
-| key in `config.global` | default |
-| --- | --- |
-| `fetch-page-size` | 500 |
-| `max-records` | 5000 |
+| key in the module schema | value | purpose |
+| --- | --- | --- |
+| `primary-key` | `dateCode` | Uses DAT's actual identifier instead of expecting an `id` column |
+| `bulk-page-size` | 1000 | Reads bulk operations in bounded pages |
 
 "Select all" fetches only the `dateCode` primary keys, so it can select the
 complete filtered result without materialising all records in grapi. A progress
-bar shows the loaded and total ID count. The gruim image also uses `dateCode` in
-record actions and excludes the generated `globalSearch` column from update
-payloads; no project-specific gruim patch is required.
+bar shows the loaded and total ID count. The gruim image also excludes the
+generated `globalSearch` column from update payloads; no project-specific gruim
+patch is required.
 
 Both grapi layers also set `RestDefaultLimit=1000`, so a REST list request
 without pagination cannot materialise the entire table.
@@ -174,10 +177,11 @@ There is no secret file to prepare: the chart brings its own MySQL and Redis,
 and the generated credentials never leave the cluster.
 
 DevSpace forwards the demo UI to port `4000`, layer-one grapi to `3000`, the
-cached grapi to `3001`, and gruim to `8080`.
+cached grapi to `3001`, layer-one gruim to `8080`, and cache-layer gruim to
+`8081`.
 
 Layer one serves MySQL. The `grascache` layer consumes layer one's OpenAPI
-document, caches responses in Redis and enables MCP. Its
+document and caches responses in Redis. Its
 datasource is named `redis` rather than `redisDS` because a Crossplane
 `ManagedDataSource` name has to be an RFC 1123 subdomain, and an uppercase
 letter makes the release fail.

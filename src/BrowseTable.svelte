@@ -31,7 +31,7 @@
             },
             schema: {
               "primary-key": "dateCode",
-              "bulk-page-size": 1000,
+              "bulk-page-size": 5000,
               "field-properties": {
                 "field-order": [
                   "dateCode", "fzab", "hstb", "otgb", "htb", "utb",
