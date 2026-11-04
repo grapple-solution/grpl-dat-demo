@@ -150,7 +150,7 @@ dev:
     labelSelector:
       app.kubernetes.io/name: gruim
       grpl.io/resourceName: ${APP_NAME}-gras-gruim
-    devImage: grpl/gruim:0.3.64.pr-197
+    devImage: grpl/gruim:0.3.64.pr-198
     # Build assets before starting the gruim dev server.
     command:
       - sh
@@ -190,7 +190,7 @@ dev:
     labelSelector:
       app.kubernetes.io/name: gruim
       grpl.io/resourceName: ${APP_NAME}-grascache-gruim
-    devImage: grpl/gruim:0.3.64.pr-197
+    devImage: grpl/gruim:0.3.64.pr-198
     command:
       - sh
       - -c

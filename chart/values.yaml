@@ -148,13 +148,13 @@ grases:
       name: dat-demo
       runimages:
         image: grpl/gruim
-        tag: "0.3.64.pr-197"
+        tag: "0.3.64.pr-198"
       ssl: true
       sslissuer: letsencrypt-grapple-demo
       autoscaling:
         maxReplicas: 3
       style: '{"colors":{"primary":"#1451cb"}}'
-      config: '{"global":{"fetch-page-size":500,"max-records":5000}}'
+      config: '{"global":{"fetch-page-size":500,"max-records":5000,"dropdown-pagination":true,"dropdown-page-size":10}}'
       additionalpackages: ""
       custommodules: []
       prepatches: []
@@ -240,13 +240,13 @@ grases:
       name: dat-demo-cache
       runimages:
         image: grpl/gruim
-        tag: "0.3.64.pr-197"
+        tag: "0.3.64.pr-198"
       ssl: true
       sslissuer: letsencrypt-grapple-demo
       autoscaling:
         maxReplicas: 1
       style: '{"colors":{"primary":"#1451cb"}}'
-      config: '{"global":{"fetch-page-size":500,"max-records":5000}}'
+      config: '{"global":{"fetch-page-size":500,"max-records":5000,"dropdown-pagination":true,"dropdown-page-size":10}}'
       additionalpackages: ""
       custommodules: []
       prepatches: []
