@@ -14,6 +14,7 @@
   load={() => import("AppCache/dsearchtreeDatecode2")}
   props={{
     css: adminModuleCss,
+    // the drill-down itself; see src/vehicleSearchConfig.ts
     distinctFilters: vehicleDistinctFilters,
     translation: vehicleFilterTranslation,
     schema: {

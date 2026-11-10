@@ -67,9 +67,15 @@ anything that has been shared in plain text.
 
 The Grapple backend configuration lives in `chart/values.yaml`: the datasource
 shape, discovery and REST CRUD configuration, the fuzzy search configuration,
-and the nine SQL controllers. The generated modules receive their cascading
-filter and bulk-operation configuration in `src/TreeSearch.svelte` and
-`src/BrowseTable.svelte`.
+and the nine SQL controllers.
+
+The frontend side of that is `src/vehicleSearchConfig.ts`: it describes the
+five drill-down dropdowns, how each one feeds the next, and the headings they
+carry. Both search tabs read it, so a change to the search normally means
+editing that one file. `src/TreeSearch.svelte` and `src/FuzzySearch.svelte`
+only pass it on, together with the handful of options that differ between the
+two (the search input, the fixed operation parameters, the page size), and
+`src/GeneratedSearch.svelte` mounts the module and tears it down again.
 
 ## Local frontend development
 

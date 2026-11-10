@@ -14,6 +14,8 @@
   load={() => import("AppCache/dsearchtreeFuzzyDatecode2/fuzzySearch")}
   props={{
     css: adminModuleCss,
+    // what the user types; the generated module sends it as the operation's
+    // own parameter, so `name` has to match the parameter's name
     parameterInputs: [
       {
         name: "searchTerm",
@@ -21,10 +23,12 @@
         placeholder: "e.g. BMW diesel automatic",
       },
     ],
+    // fixed operation parameters, sent with every request
     parameters: { useGlobalSearch: false },
     // the fuzzy operation returns { item, ... } per hit
     resultPath: "item",
     distinctFilters: vehicleDistinctFilters,
+    // rows per "Load More"
     pageSize: 100,
     translation: vehicleFilterTranslation,
     schema: vehicleSearchSchema,
