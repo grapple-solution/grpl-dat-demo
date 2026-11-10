@@ -76,7 +76,7 @@ grases:
         - name: init-db
           spec:
             name: init-db
-            image: grpl/grpl-dat-demo-data:dev
+            image: grpl/grpl-dat-demo-data:2776e1b
             imagePullPolicy: Always
             env:
               - name: host
@@ -132,7 +132,7 @@ grases:
         - name: init-modules
           spec:
             name: init-modules
-            image: grpl/grpl-dat-demo-modules:dev
+            image: grpl/grpl-dat-demo-modules:2776e1b
             imagePullPolicy: Always
             command: ["/bin/sh", "-c", "cp -r /modules/gras/. /opt/custom-modules/ && chown -R 1000:1000 /opt/custom-modules || true"]
             volumeMounts:

@@ -117,21 +117,17 @@ parameters through the cache layer, prevents duplicate `where` parameters and
 applies fuzzy matching before pagination. `RestDefaultLimit=1000` gives
 unpaginated REST list calls a safe default on both layers.
 
-The optional description-search lists behind HST, OTG, HT and UT are search
-driven. They query from the second character, debounced by 250 ms, and the previous request is aborted
-when the next keystroke arrives. Each query splits its name and code branches
-into a `UNION` so both can use an index: an `OR` across two columns makes MySQL
-abandon the range scan and read the whole index, which measured 1.324 s against
-0.021 s for the same search. The matching indexes are created beside the seed,
-only when absent.
+The generated guided and description-search modules use the configured
+SQL-controller filters to narrow `FZA → HST → OTG → HT → UT`. Gruim resolves
+the selected values into `sqlParams` and applies the resulting criteria to the
+repository filter.
 
 Fuzzy search uses
 `/dsearchtree/dsearchtrees/datecode2s/fuzzy/{searchTerm}` through the cache
-prefix. Its configuration includes `databaseName: dsearchtree`. The client
-sends search terms, criteria, limit and offset in the repository filter. The UI
-pages fuzzy results at 100 rows and runs a matching count query
-once per search, so both the current range and the total number of results are
-shown without loading the complete result set.
+prefix. Its configuration includes `databaseName: dsearchtree`. The generated
+gruim module sends the search term, selected criteria, limit and offset in the
+repository filter and pages results at 100 rows without loading the complete
+result set.
 
 ## Staying inside the memory budget
 

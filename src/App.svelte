@@ -1,26 +1,11 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import TreeSearch from "./TreeSearch.svelte";
   import FuzzySearch from "./FuzzySearch.svelte";
   import BrowseTable from "./BrowseTable.svelte";
-  import { loadVehicleTypes, errorMessage, type Option } from "./api";
 
   type View = "tree" | "fuzzy" | "browse";
 
   let view: View = "tree";
-  let vehicleTypes: Option[] = [];
-  let initialLoading = true;
-  let startupError = "";
-
-  onMount(async () => {
-    try {
-      vehicleTypes = await loadVehicleTypes();
-    } catch (error) {
-      startupError = errorMessage(error);
-    } finally {
-      initialLoading = false;
-    }
-  });
 </script>
 
 <svelte:head><title>DAT vehicle catalogue</title></svelte:head>
@@ -51,17 +36,10 @@
   </header>
 
   <div class="w-full px-6 py-10">
-    {#if startupError}
-      <div role="alert" class="mb-8 flex items-start gap-3 rounded-xl border border-app-danger/30 bg-app-danger-soft px-4 py-3 text-sm text-app-danger">
-        <span class="mt-0.5 font-semibold">Vehicle data is unavailable</span>
-        <span class="text-app-danger/80">{startupError}</span>
-      </div>
-    {/if}
-
     {#if view === "tree"}
       <TreeSearch />
     {:else if view === "fuzzy"}
-      <FuzzySearch {vehicleTypes} {initialLoading} />
+      <FuzzySearch />
     {:else}
       <section aria-labelledby="browse-title">
         <div class="mb-7 max-w-2xl">
