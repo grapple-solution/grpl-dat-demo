@@ -89,12 +89,35 @@ export const adminModuleCss = `
   background: rgb(var(--dat-accent-soft)) !important;
 }
 
+/* The search view has inputs of its own, outside the table. They sit beside
+   svelte-select controls, so they take the same surface, border and radius
+   rather than the browser default. */
 #admin-list-table input,
 #admin-list-table select,
-#admin-list-table textarea {
+#admin-list-table textarea,
+input[type="text"]:not(.svelte-select input),
+input[type="number"]:not(.svelte-select input),
+input[type="search"]:not(.svelte-select input) {
   background: rgb(var(--dat-surface)) !important;
   color: rgb(var(--dat-ink)) !important;
   border-color: rgb(var(--dat-line)) !important;
+}
+
+input[type="text"]:not(.svelte-select input),
+input[type="number"]:not(.svelte-select input),
+input[type="search"]:not(.svelte-select input) {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: var(--border-radius, 6px);
+  min-height: var(--height, 42px);
+}
+
+/* A disabled or loading button keeps Tailwind's bg-gray-200, which is a pale
+   block on this page. */
+button[class*="bg-gray-200"]:not([class*="rounded-full"]) {
+  background: rgb(var(--dat-sunken)) !important;
+  border-color: rgb(var(--dat-line)) !important;
+  color: rgb(var(--dat-muted)) !important;
 }
 
 #admin-list-table input[type="checkbox"] {
