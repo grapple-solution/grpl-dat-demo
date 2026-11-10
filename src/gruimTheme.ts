@@ -9,17 +9,22 @@
 export const adminModuleCss = `
   color: rgb(var(--dat-ink));
   --background: rgb(var(--dat-surface));
-  --borderFocusColor: rgb(var(--dat-accent));
-  --borderHoverColor: rgb(var(--dat-line-strong));
-  --disabledBackground: rgb(var(--dat-sunken));
-  --disabledColor: rgb(var(--dat-muted));
-  --inputColor: rgb(var(--dat-ink));
-  --itemColor: rgb(var(--dat-ink));
-  --itemHoverBG: rgb(var(--dat-accent-soft));
-  --itemIsActiveBG: rgb(var(--dat-accent-soft));
-  --listBackground: rgb(var(--dat-surface));
-  --placeholderColor: rgb(var(--dat-muted));
-  --selectedItemColor: rgb(var(--dat-ink));
+  /* svelte-select 5 reads kebab-case names; it redefines the camelCase ones
+     from them, so setting those has no effect at all. --border-focused and
+     --border-hover are whole borders in v5, not colours. */
+  --border-focused: 1px solid rgb(var(--dat-accent));
+  --border-hover: 1px solid rgb(var(--dat-line-strong));
+  --disabled-background: rgb(var(--dat-sunken));
+  --disabled-color: rgb(var(--dat-muted));
+  --disabled-border-color: rgb(var(--dat-line));
+  --disabled-placeholder-color: rgb(var(--dat-muted));
+  --input-color: rgb(var(--dat-ink));
+  --item-color: rgb(var(--dat-ink));
+  --item-hover-bg: rgb(var(--dat-accent-soft));
+  --item-is-active-bg: rgb(var(--dat-accent-soft));
+  --list-background: rgb(var(--dat-surface));
+  --placeholder-color: rgb(var(--dat-muted));
+  --selected-item-color: rgb(var(--dat-ink));
 }
 
 #admin-list-table {
