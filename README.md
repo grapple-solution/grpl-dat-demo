@@ -4,14 +4,14 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 
 ## Scope
 
-- Cascading vehicle search: `FZA → HST → OTG → HT → UT`
+- Generated gruim cascading vehicle search: `FZA → HST → OTG → HT → UT`
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
 - A browse tab that embeds the cache-layer gruim admin module for `datecode2`
 
 Vehicle queries go through the Redis-backed layer-two API, which caches layer
-one's OpenAPI proxy. Search-tree options, fuzzy search and vehicle lists all use
-this cache layer.
+one's OpenAPI proxy. The generated search and admin modules, fuzzy search and
+vehicle lists all use this cache layer.
 
 ## Project structure
 
@@ -67,8 +67,9 @@ anything that has been shared in plain text.
 
 The Grapple backend configuration lives in `chart/values.yaml`: the datasource
 shape, discovery and REST CRUD configuration, the fuzzy search configuration,
-and the nine SQL controllers. The generated admin module receives its
-bulk-operation configuration in `src/BrowseTable.svelte`.
+and the nine SQL controllers. The generated modules receive their cascading
+filter and bulk-operation configuration in `src/TreeSearch.svelte` and
+`src/BrowseTable.svelte`.
 
 ## Local frontend development
 
@@ -83,8 +84,9 @@ pnpm dev
 The frontend is available at <http://localhost:4000>.
 `SVELTE_APP_API_URL` must point to the cached API including its `/dsearchtree`
 prefix. `SVELTE_APP_TREE_API_URL` is an optional direct-API override and is
-empty by default. The All vehicles tab additionally requires the generated
-cache-layer gruim remote, which this frontend-only workflow does not start.
+empty by default. The Guided search and All vehicles tabs additionally require
+the generated cache-layer gruim remote, which this frontend-only workflow does
+not start.
 
 ## Complete Docker setup
 
@@ -101,12 +103,12 @@ layer-two proxy at <http://localhost:3334>, and the demo UI at
 controllers and can take approximately two minutes. Layer two uses layer one's
 internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
-Docker Compose does not start either gruim service. The browse tab loads
-`AppCache/dsearchtreeDatecode2` from the cache-layer gruim over module
-federation, so it is unavailable in this standalone Docker setup. The module is
-imported on demand and the tab reports a clear error when the remote is absent.
-Vehicle queries still go to the cached grapi through the `/dsearchtree` prefix,
-including the search-tree option lists.
+Docker Compose does not start either gruim service. The Guided search and browse
+tabs load `AppCache/dsearchtreeDatecode2` from the cache-layer gruim over module
+federation, so they are unavailable in this standalone Docker setup. The module
+is imported on demand and the tabs report a clear error when the remote is
+absent. Description-search requests still go to the cached grapi through the
+`/dsearchtree` prefix.
 
 ## API behavior
 
@@ -115,8 +117,8 @@ parameters through the cache layer, prevents duplicate `where` parameters and
 applies fuzzy matching before pagination. `RestDefaultLimit=1000` gives
 unpaginated REST list calls a safe default on both layers.
 
-The option lists behind HST, OTG, HT and UT are search driven. They query from
-the second character, debounced by 250 ms, and the previous request is aborted
+The optional description-search lists behind HST, OTG, HT and UT are search
+driven. They query from the second character, debounced by 250 ms, and the previous request is aborted
 when the next keystroke arrives. Each query splits its name and code branches
 into a `UNION` so both can use an index: an `OR` across two columns makes MySQL
 abandon the range scan and read the whole index, which measured 1.324 s against
@@ -186,10 +188,11 @@ datasource is named `redis` rather than `redisDS` because a Crossplane
 `ManagedDataSource` name has to be an RFC 1123 subdomain, and an uppercase
 letter makes the release fail.
 
-The cache layer has its own gruim. The browse tab loads
-`AppCache/dsearchtreeDatecode2` from it, while all vehicle-search API calls use
-the cache layer. After an API upgrade, flush Redis so responses cached by an older
-version are not retained for the configured 100-minute TTL.
+The cache layer has its own gruim. The Guided search and browse tabs configure
+and load its generated `AppCache/dsearchtreeDatecode2` module, while all
+vehicle-search API calls use the cache layer. After an API upgrade, flush Redis
+so responses cached by an older version are not retained for the configured
+100-minute TTL.
 
 Helm's own commands need the cluster lookups disabled to run offline, in this
 chart and in the other Grapple demos alike:

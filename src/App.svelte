@@ -59,7 +59,7 @@
     {/if}
 
     {#if view === "tree"}
-      <TreeSearch {vehicleTypes} {initialLoading} />
+      <TreeSearch />
     {:else if view === "fuzzy"}
       <FuzzySearch {vehicleTypes} {initialLoading} />
     {:else}

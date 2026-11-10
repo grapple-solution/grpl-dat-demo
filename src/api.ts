@@ -103,8 +103,6 @@ const sqlOptions = async (
   })));
 };
 
-export const loadBrands = (fza: string) => sqlOptions("/brandsByVehicleType", { FZA: fza }, "HST", "HSTB");
-
 const searchParams = (query: string) => ({
   nameQuery: `${query}%`,
   codeQuery: /^\d+$/.test(query) ? query : "-1",
@@ -122,27 +120,6 @@ export const searchModelGroups = (query: string, signal?: AbortSignal) =>
 export const searchModels = (query: string, signal?: AbortSignal) =>
   sqlOptions("/models", searchParams(query), "UT", "UTB", signal);
 
-export const loadModelRanges = (fza: string, hst: string) => sqlOptions(
-  "/modelRangeByVehicleTypeAndManufacturer",
-  { FZA: fza, HST: hst },
-  "OTG",
-  "OTGB",
-);
-
-export const loadModelGroups = (fza: string, hst: string, otg: string) => sqlOptions(
-  "/modelGroupByVehicleTypeAndManufacturerAndModelRange",
-  { FZA: fza, HST: hst, OTG: otg },
-  "HT",
-  "HTB",
-);
-
-export const loadModels = (fza: string, hst: string, ht: string) => sqlOptions(
-  "/modelByVehicleTypeAndManufacturerAndModelGroup",
-  { FZA: fza, HST: hst, HT: ht },
-  "UT",
-  "UTB",
-);
-
 const whereFromCriteria = (criteria: Criteria) => Object.fromEntries(
   Object.entries(criteria)
     .filter(([, value]) => value)
@@ -151,13 +128,6 @@ const whereFromCriteria = (criteria: Criteria) => Object.fromEntries(
 
 // Keep broad vehicle results paginated.
 export const PAGE_SIZE = 100;
-
-export const countVehicles = async (criteria: Criteria) => {
-  const result = await request<{ count: number }>("/datecode2s/count", {
-    where: whereFromCriteria(criteria),
-  });
-  return result.count;
-};
 
 const fuzzyWhere = (text: string, criteria: Criteria) => {
   const selected = whereFromCriteria(criteria);
@@ -176,16 +146,6 @@ export const countFuzzyVehicles = async (text: string, criteria: Criteria) => {
   });
   return result.count;
 };
-
-export const findVehicles = (criteria: Criteria, offset = 0, limit = PAGE_SIZE) =>
-  request<Vehicle[]>("/datecode2s", {
-    filter: {
-      where: whereFromCriteria(criteria),
-      order: ["hstb ASC", "htb ASC", "utb ASC"],
-      limit,
-      offset,
-    },
-  });
 
 const byLabel = (left: Vehicle, right: Vehicle) =>
   (left.hstb ?? "").localeCompare(right.hstb ?? "")
