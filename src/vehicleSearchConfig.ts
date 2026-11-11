@@ -135,16 +135,57 @@ export const vehicleIndependentFilters: VehicleFilter[] = [
 
 /** Dropdown headings. Keys are the `label` values above. */
 export const vehicleFilterTranslation: Record<string, string> = {
-  VehicleType: "Vehicle type",
-  Manufacturer: "Manufacturer",
-  ModelRange: "Model range",
-  ModelGroup: "Model group",
-  Model: "Model",
+  VehicleType: "Vehicle type (FZA)",
+  Manufacturer: "Manufacturer (HST)",
+  ModelRange: "Model range (OTG)",
+  ModelGroup: "Model group (HT)",
+  Model: "Model (UT)",
+  dateCode: "Date code",
+  fzab: "Vehicle type (FZA)",
+  hstb: "Manufacturer (HST)",
+  otgb: "Model range (OTG)",
+  htb: "Model group (HT)",
+  utb: "Model (UT)",
+  avMoB: "Engine",
+  ccm: "Displacement",
+  kw: "Power (kW)",
+  antr: "Drive",
+  ab: "Body",
 };
 
-/** Passed to the modules as `schema`; hides the column the fuzzy search adds. */
 export const vehicleSearchSchema = {
   "field-properties": {
+    "field-order": [
+      "dateCode",
+      "fzab",
+      "hstb",
+      "otgb",
+      "htb",
+      "utb",
+      "avMoB",
+      "kw",
+      "ccm",
+      "antr",
+      "ab",
+    ],
     "auto-generated-fields": ["globalSearch"],
+    "hidden-fields": [
+      "fza",
+      "hst",
+      "ht",
+      "ut",
+      "otg",
+      "avMo",
+      "avKa",
+      "avGe",
+      "aZyl",
+      "ats",
+      "rSt",
+      "kSt",
+      "kZbewert",
+      "kZkalk",
+      "kzGlas",
+      "globalSearch",
+    ],
   },
 };
