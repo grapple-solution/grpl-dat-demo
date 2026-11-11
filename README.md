@@ -70,10 +70,10 @@ shape, discovery and REST CRUD configuration, the fuzzy search configuration,
 and the nine SQL controllers.
 
 The frontend side of that is `src/vehicleSearchConfig.ts`: it describes the
-five drill-down dropdowns, how each one feeds the next, and the headings they
-carry. Both search tabs read it, so a change to the search normally means
-editing that one file. `src/TreeSearch.svelte` and `src/FuzzySearch.svelte`
-only pass it on, together with the handful of options that differ between the
+five dependent Guided search dropdowns and the independent optional filters
+used by Description search. Both tabs read it, so a change to the search
+normally means editing that one file. `src/TreeSearch.svelte` and
+`src/FuzzySearch.svelte` only pass it on, together with the options that differ between the
 two (the search input, the fixed operation parameters, the page size), and
 `src/GeneratedSearch.svelte` mounts the module and tears it down again.
 
@@ -123,10 +123,10 @@ parameters through the cache layer, prevents duplicate `where` parameters and
 applies fuzzy matching before pagination. `RestDefaultLimit=1000` gives
 unpaginated REST list calls a safe default on both layers.
 
-The generated guided and description-search modules use the configured
-SQL-controller filters to narrow `FZA → HST → OTG → HT → UT`. Gruim resolves
-the selected values into `sqlParams` and applies the resulting criteria to the
-repository filter.
+The generated Guided search module narrows `FZA → HST → OTG → HT → UT` through
+dependent SQL-controller filters. Description search provides the same criteria
+as independent optional type-ahead filters. Gruim resolves their values into
+`sqlParams` and applies the selected criteria to the repository filter.
 
 Fuzzy search uses
 `/dsearchtree/dsearchtrees/datecode2s/fuzzy/{searchTerm}` through the cache

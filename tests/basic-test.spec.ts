@@ -39,6 +39,14 @@ test.beforeEach(async ({ page }) => {
     // the five drill-down controllers, each narrowed by the ones above it
     if (url.pathname === '/vehicleTypes')
       return json([{ FZA: '1', FZAB: 'Pkw, SUV, Kleintransporter' }]);
+    if (url.pathname === '/brands')
+      return json([{ HST: '130', HSTB: 'BMW' }]);
+    if (url.pathname === '/modelRanges')
+      return json([{ OTG: '3', OTGB: '3' }]);
+    if (url.pathname === '/modelGroups')
+      return json([{ HT: '42', HTB: '3er (G20)' }]);
+    if (url.pathname === '/models')
+      return json([{ UT: '7', UTB: '320d xDrive' }]);
     if (url.pathname === '/brandsByVehicleType')
       return json([{ FZA: '1', HST: '130', HSTB: 'BMW' }]);
     if (url.pathname === '/modelRangeByVehicleTypeAndManufacturer')
@@ -58,6 +66,12 @@ test.beforeEach(async ({ page }) => {
 /** Opens a gruim distinct filter by its heading and picks one of its values. */
 async function pickFilter(page: Page, label: string, option: string) {
   await page.getByPlaceholder(label, { exact: true }).click();
+  await page.locator('.svelte-select-list').getByText(option, { exact: true }).click();
+}
+
+/** Searches an independent type-ahead filter and selects its result. */
+async function searchFilter(page: Page, label: string, query: string, option: string) {
+  await page.getByPlaceholder(label, { exact: true }).fill(query);
   await page.locator('.svelte-select-list').getByText(option, { exact: true }).click();
 }
 
@@ -141,12 +155,15 @@ test('description search narrows by filter and pages with Load More', async ({ p
   await page.goto('/');
   await openTab(page, 'Description search');
   await page.getByLabel('Vehicle description').fill('BMW');
-  await pickFilter(page, 'Vehicle type', 'Pkw, SUV, Kleintransporter');
+  for (const label of ['Manufacturer', 'Model range', 'Model group', 'Model']) {
+    await expect(page.getByPlaceholder(label, { exact: true })).toBeEnabled();
+  }
+  await searchFilter(page, 'Manufacturer', 'BMW', 'BMW');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   await expect(page.getByRole('cell', { name: 'BMW' }).first()).toBeVisible();
   // the dropdown narrows the same filter the caller already set
-  expect(lastFilter()).toMatchObject({ where: { fza: '1' }, limit: 101, skip: 0 });
+  expect(lastFilter()).toMatchObject({ where: { hst: '130' }, limit: 101, skip: 0 });
 
   await page.getByRole('button', { name: 'Load More', exact: true }).click();
   await expect(page.getByRole('cell', { name: 'second page' })).toBeVisible();
@@ -171,7 +188,7 @@ test('a filter changed mid-request still decides the result', async ({ page }) =
 
   // while that request is still open, narrow the search
   await pickFilter(page, 'Vehicle type', 'Pkw, SUV, Kleintransporter');
-  await pickFilter(page, 'Manufacturer', 'BMW');
+  await searchFilter(page, 'Manufacturer', 'BMW', 'BMW');
 
   // the slower, wider answer must not win
   await expect(page.getByRole('cell', { name: 'narrowed' })).toBeVisible();

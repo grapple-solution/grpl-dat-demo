@@ -34,6 +34,10 @@ export type VehicleFilter = {
   /** Inputs of `operationId`, taken from another filter's selection. Leave it
    *  out for the first link of the chain. */
   params?: Record<string, string>;
+  /** Controller parameters built from the user's type-ahead text. */
+  searchParams?: Record<string, string>;
+  /** Minimum number of characters required before searching. */
+  searchMinLength?: number;
   /** false = one value at a time. */
   multiple: boolean;
 };
@@ -84,6 +88,47 @@ export const vehicleDistinctFilters: VehicleFilter[] = [
     valueField: "UT",
     columns: ["UTB"],
     params: { FZA: "$VehicleType", HST: "$Manufacturer", HT: "$ModelGroup" },
+    multiple: false,
+  },
+];
+
+/** Independent optional filters used by the description search. */
+export const vehicleIndependentFilters: VehicleFilter[] = [
+  vehicleDistinctFilters[0],
+  {
+    label: "Manufacturer",
+    operationId: "dsearchtreeBrandsController.dsearchtreeBrands",
+    field: "hst",
+    valueField: "HST",
+    columns: ["HSTB"],
+    searchParams: { nameQuery: "$search%", codeQuery: "$search" },
+    multiple: false,
+  },
+  {
+    label: "ModelRange",
+    operationId: "dsearchtreeModelRangesController.dsearchtreeModelRanges",
+    field: "otg",
+    valueField: "OTG",
+    columns: ["OTGB"],
+    searchParams: { nameQuery: "$search%", codeQuery: "$search%" },
+    multiple: false,
+  },
+  {
+    label: "ModelGroup",
+    operationId: "dsearchtreeModelGroupsController.dsearchtreeModelGroups",
+    field: "ht",
+    valueField: "HT",
+    columns: ["HTB"],
+    searchParams: { nameQuery: "$search%", codeQuery: "$search" },
+    multiple: false,
+  },
+  {
+    label: "Model",
+    operationId: "dsearchtreeModelsController.dsearchtreeModels",
+    field: "ut",
+    valueField: "UT",
+    columns: ["UTB"],
+    searchParams: { nameQuery: "$search%", codeQuery: "$search" },
     multiple: false,
   },
 ];
