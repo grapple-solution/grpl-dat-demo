@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { vehicleFilterTranslation as T } from '../src/vehicleSearchConfig';
+
 /**
  * The search tabs are gruim modules loaded over module federation, so these
  * tests drive gruim's own markup: svelte-select dropdowns for the filters and
@@ -85,13 +87,13 @@ test('guided search drills down and lists the vehicle', async ({ page }) => {
   ).toBeVisible();
 
   // each dropdown stays disabled until the one it depends on has a value
-  await expect(page.getByPlaceholder('Manufacturer', { exact: true })).toBeDisabled();
+  await expect(page.getByPlaceholder(T.Manufacturer, { exact: true })).toBeDisabled();
 
-  await pickFilter(page, 'Vehicle type', 'Pkw, SUV, Kleintransporter');
-  await pickFilter(page, 'Manufacturer', 'BMW');
-  await pickFilter(page, 'Model range', '3');
-  await pickFilter(page, 'Model group', '3er (G20)');
-  await pickFilter(page, 'Model', '320d xDrive');
+  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
+  await pickFilter(page, T.Manufacturer, 'BMW');
+  await pickFilter(page, T.ModelRange, '3');
+  await pickFilter(page, T.ModelGroup, '3er (G20)');
+  await pickFilter(page, T.Model, '320d xDrive');
 
   await expect(page.getByRole('cell', { name: 'BMW' }).first()).toBeVisible();
   await expect(page.getByRole('cell', { name: '320d xDrive' }).first()).toBeVisible();
@@ -99,16 +101,16 @@ test('guided search drills down and lists the vehicle', async ({ page }) => {
 
 test('changing a parent clears the dropdowns below it', async ({ page }) => {
   await page.goto('/');
-  await pickFilter(page, 'Vehicle type', 'Pkw, SUV, Kleintransporter');
-  await pickFilter(page, 'Manufacturer', 'BMW');
-  await pickFilter(page, 'Model range', '3');
-  await pickFilter(page, 'Model group', '3er (G20)');
+  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
+  await pickFilter(page, T.Manufacturer, 'BMW');
+  await pickFilter(page, T.ModelRange, '3');
+  await pickFilter(page, T.ModelGroup, '3er (G20)');
 
   // re-picking the top of the chain has to reset everything under it, not
   // just the next one down
-  await pickFilter(page, 'Vehicle type', 'Pkw, SUV, Kleintransporter');
+  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
 
-  for (const label of ['Model range', 'Model group', 'Model']) {
+  for (const label of [T.ModelRange, T.ModelGroup, T.Model]) {
     await expect(page.getByPlaceholder(label, { exact: true })).toBeDisabled();
   }
 });
@@ -122,7 +124,7 @@ test('description search sends the term and unwraps the result envelope', async 
 
   await page.goto('/');
   await openTab(page, 'Description search');
-  await page.getByLabel('Vehicle description').fill('BMW diesel automatic');
+  await page.getByLabel('Vehicle description', { exact: true }).fill('BMW diesel automatic');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   await expect(page.getByRole('cell', { name: '320d xDrive' }).first()).toBeVisible();
@@ -154,11 +156,11 @@ test('description search narrows by filter and pages with Load More', async ({ p
 
   await page.goto('/');
   await openTab(page, 'Description search');
-  await page.getByLabel('Vehicle description').fill('BMW');
-  for (const label of ['Manufacturer', 'Model range', 'Model group', 'Model']) {
+  await page.getByLabel('Vehicle description', { exact: true }).fill('BMW');
+  for (const label of [T.Manufacturer, T.ModelRange, T.ModelGroup, T.Model]) {
     await expect(page.getByPlaceholder(label, { exact: true })).toBeEnabled();
   }
-  await searchFilter(page, 'Manufacturer', 'BMW', 'BMW');
+  await searchFilter(page, T.Manufacturer, 'BMW', 'BMW');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   await expect(page.getByRole('cell', { name: 'BMW' }).first()).toBeVisible();
@@ -183,12 +185,12 @@ test('a filter changed mid-request still decides the result', async ({ page }) =
 
   await page.goto('/');
   await openTab(page, 'Description search');
-  await page.getByLabel('Vehicle description').fill('BMW');
+  await page.getByLabel('Vehicle description', { exact: true }).fill('BMW');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   // while that request is still open, narrow the search
-  await pickFilter(page, 'Vehicle type', 'Pkw, SUV, Kleintransporter');
-  await searchFilter(page, 'Manufacturer', 'BMW', 'BMW');
+  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
+  await searchFilter(page, T.Manufacturer, 'BMW', 'BMW');
 
   // the slower, wider answer must not win
   await expect(page.getByRole('cell', { name: 'narrowed' })).toBeVisible();
@@ -197,13 +199,13 @@ test('a filter changed mid-request still decides the result', async ({ page }) =
 
 test('leaving a tab tears the module down', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByPlaceholder('Vehicle type', { exact: true })).toHaveCount(1);
+  await expect(page.getByPlaceholder(T.VehicleType, { exact: true })).toHaveCount(1);
 
   await openTab(page, 'Description search');
   await openTab(page, 'Guided search');
 
   // a module left mounted would leave its dropdowns behind as a second copy
-  await expect(page.getByPlaceholder('Vehicle type', { exact: true })).toHaveCount(1);
+  await expect(page.getByPlaceholder(T.VehicleType, { exact: true })).toHaveCount(1);
   await expect(
     page.getByRole('heading', { name: 'Find a vehicle step by step' }),
   ).toBeVisible();
@@ -212,14 +214,14 @@ test('leaving a tab tears the module down', async ({ page }) => {
 test('clear empties the search, the filters and the table', async ({ page }) => {
   await page.goto('/');
   await openTab(page, 'Description search');
-  await page.getByLabel('Vehicle description').fill('BMW diesel automatic');
-  await pickFilter(page, 'Vehicle type', 'Pkw, SUV, Kleintransporter');
+  await page.getByLabel('Vehicle description', { exact: true }).fill('BMW diesel automatic');
+  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await expect(page.getByRole('cell', { name: '320d xDrive' }).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Clear', exact: true }).click();
 
-  await expect(page.getByLabel('Vehicle description')).toHaveValue('');
+  await expect(page.getByLabel('Vehicle description', { exact: true })).toHaveValue('');
   await expect(page.getByRole('cell', { name: '320d xDrive' })).toHaveCount(0);
-  await expect(page.getByPlaceholder('Manufacturer', { exact: true })).toBeDisabled();
+  await expect(page.getByPlaceholder(T.Manufacturer, { exact: true })).toBeDisabled();
 });
