@@ -13,6 +13,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  // fail with a clear message when the gruim remote or the API is missing
+  globalSetup: './tests/global-setup.ts',
   // A tab switch waits for a module federation chunk, not just a render, so
   // both budgets are wider than the Playwright defaults.
   timeout: 60_000,

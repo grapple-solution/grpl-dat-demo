@@ -212,11 +212,29 @@ pnpm exec playwright install --with-deps   # first run only
 pnpm test
 ```
 
-The three Playwright tests stub every API response, so they cover the screens but
-not the DAT integration. Verify that against a running API. They start their own
-dev server on port 4010, away from the one `pnpm dev` uses, because a server
-left running on the shared port is reused without the test environment and every
-mocked call then misses.
+The Playwright tests drive the generated gruim modules, so they need a gruim
+remote to load them from and a live API behind it:
+
+```sh
+docker compose up                              # the two DAT API layers
+
+# in a gruim checkout — this overwrites its generated assets for whichever API
+# it was last built against, so keep a copy if that setup still matters
+OPENAPI_URL=http://localhost:3334/openapi.json node parseOpenApiSchema.js
+node generateModules.js
+MF_NAME=AppCacheLocal SVELTE_APP_API_ENDPOINT=http://localhost:3334 pnpm start
+
+SVELTE_APP_CACHE_REMOTE_URL=http://localhost:8080 \
+  CACHE_CONTAINER_NAME=AppCacheLocal pnpm test
+```
+
+Generate against the cache layer: its app prefix is what gives the modules the
+names the demo imports. The tests stub the data the modules ask for, so they
+cover the screens but not the DAT data — verify that against a running API. The
+schema still comes from the live API through the remote's own `/api` proxy.
+They start their own dev server on port 4010, away from the one `pnpm dev` uses,
+because a server left running on the shared port is reused without the test
+environment and every mocked call then misses.
 
 ## Secrets
 
