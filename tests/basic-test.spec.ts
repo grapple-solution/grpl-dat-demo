@@ -30,17 +30,28 @@ const hit = (row: unknown) => ({ item: row, score: 1 });
 
 const filterOf = (url: URL) => JSON.parse(url.searchParams.get('filter') || '{}');
 
+/** The path as the schema spells it, without gruim's proxy and app prefix. */
+const apiPath = (url: URL) => url.pathname.replace('/api/dsearchtree', '');
+
 test.beforeEach(async ({ page }) => {
-  await page.route('http://localhost:3333/**', async (route) => {
+  // gruim rewrites every call to its own origin behind an /api proxy, and the
+  // cache layer sits under its app prefix, so match the path and strip both:
+  // what is left reads like the schema, wherever the remote is served from.
+  await page.route('**/api/dsearchtree/**', async (route) => {
     const url = new URL(route.request().url());
+    url.pathname = url.pathname.replace('/api/dsearchtree', '');
     const json = (value: unknown) => route.fulfill({ json: value });
 
     if (url.pathname === '/datecode2s/count') return json({ count: 1 });
     if (url.pathname === '/datecode2s') return json([vehicle]);
 
     // the five drill-down controllers, each narrowed by the ones above it
+    // two of them, so a test can actually change the top of the chain
     if (url.pathname === '/vehicleTypes')
-      return json([{ FZA: '1', FZAB: 'Pkw, SUV, Kleintransporter' }]);
+      return json([
+        { FZA: '1', FZAB: 'Pkw, SUV, Kleintransporter' },
+        { FZA: '2', FZAB: 'Lkw' },
+      ]);
     if (url.pathname === '/brands')
       return json([{ HST: '130', HSTB: 'BMW' }]);
     if (url.pathname === '/modelRanges')
@@ -58,22 +69,34 @@ test.beforeEach(async ({ page }) => {
     if (url.pathname === '/modelByVehicleTypeAndManufacturerAndModelGroup')
       return json([{ UT: '7', UTB: '320d xDrive' }]);
 
-    if (url.pathname.startsWith('/dsearchtrees/datecode2s/fuzzy/'))
+    if (apiPath(url).startsWith('/dsearchtrees/datecode2s/fuzzy/'))
       return json([hit(vehicle)]);
 
     return route.fulfill({ status: 404, json: { error: { message: 'Not mocked' } } });
   });
 });
 
+/**
+ * The select under a filter's heading. Addressing it by placeholder only works
+ * while nothing is picked: svelte-select drops the placeholder once it is.
+ */
+const filterControl = (page: Page, label: string) =>
+  page.locator(
+    `xpath=//div[normalize-space(text())=${JSON.stringify(label)}]` +
+      `/following-sibling::div[contains(@class,"svelte-select")][1]`,
+  );
+
 /** Opens a gruim distinct filter by its heading and picks one of its values. */
 async function pickFilter(page: Page, label: string, option: string) {
-  await page.getByPlaceholder(label, { exact: true }).click();
+  // click the input, not the control: it carries the disabled state, so the
+  // click waits for the filter to be ready instead of landing on a dead div
+  await filterControl(page, label).locator('input').first().click();
   await page.locator('.svelte-select-list').getByText(option, { exact: true }).click();
 }
 
 /** Searches an independent type-ahead filter and selects its result. */
 async function searchFilter(page: Page, label: string, query: string, option: string) {
-  await page.getByPlaceholder(label, { exact: true }).fill(query);
+  await filterControl(page, label).locator('input').first().fill(query);
   await page.locator('.svelte-select-list').getByText(option, { exact: true }).click();
 }
 
@@ -106,9 +129,10 @@ test('changing a parent clears the dropdowns below it', async ({ page }) => {
   await pickFilter(page, T.ModelRange, '3');
   await pickFilter(page, T.ModelGroup, '3er (G20)');
 
-  // re-picking the top of the chain has to reset everything under it, not
-  // just the next one down
-  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
+  // changing the top of the chain has to reset everything under it, not just
+  // the next one down. Re-picking the same value is not a change: svelte-select
+  // reports none, so this has to switch to a different vehicle type.
+  await pickFilter(page, T.VehicleType, 'Lkw');
 
   for (const label of [T.ModelRange, T.ModelGroup, T.Model]) {
     await expect(page.getByPlaceholder(label, { exact: true })).toBeDisabled();
@@ -119,7 +143,7 @@ test('description search sends the term and unwraps the result envelope', async 
   const requests: URL[] = [];
   page.on('request', (request) => {
     const url = new URL(request.url());
-    if (url.pathname.startsWith('/dsearchtrees/datecode2s/fuzzy/')) requests.push(url);
+    if (apiPath(url).startsWith('/dsearchtrees/datecode2s/fuzzy/')) requests.push(url);
   });
 
   await page.goto('/');
@@ -142,7 +166,7 @@ test('description search narrows by filter and pages with Load More', async ({ p
   const lastFilter = () => filters[filters.length - 1];
   page.on('request', (request) => {
     const url = new URL(request.url());
-    if (url.pathname.startsWith('/dsearchtrees/datecode2s/fuzzy/')) filters.push(filterOf(url));
+    if (apiPath(url).startsWith('/dsearchtrees/datecode2s/fuzzy/')) filters.push(filterOf(url));
   });
 
   await page.route('**/dsearchtrees/datecode2s/fuzzy/**', async (route) => {
@@ -223,5 +247,5 @@ test('clear empties the search, the filters and the table', async ({ page }) => 
 
   await expect(page.getByLabel('Vehicle description', { exact: true })).toHaveValue('');
   await expect(page.getByRole('cell', { name: '320d xDrive' })).toHaveCount(0);
-  await expect(page.getByPlaceholder(T.Manufacturer, { exact: true })).toBeDisabled();
+  await expect(filterControl(page, T.Manufacturer)).toHaveText('');
 });

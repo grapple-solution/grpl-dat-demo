@@ -84,7 +84,7 @@ export default defineConfig({
     // The search tabs are gruim modules, so the federation remote has to be
     // reachable: export these two before running, the way rebuild.sh does.
     env: {
-      SVELTE_APP_API_URL: 'http://localhost:3333',
+      SVELTE_APP_API_URL: 'http://localhost:3334/dsearchtree',
       CACHE_CONTAINER_NAME: process.env.CACHE_CONTAINER_NAME ?? '',
       SVELTE_APP_CACHE_REMOTE_URL: process.env.SVELTE_APP_CACHE_REMOTE_URL ?? '',
     },
