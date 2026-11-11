@@ -72,8 +72,17 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'SVELTE_APP_API_URL=http://localhost:3333 npm run start -- --no-open --port 4010',
+    command: 'npm run start -- --no-open --port 4010',
     url: 'http://127.0.0.1:4010',
     reuseExistingServer: !process.env.CI,
+    // the first rspack build of the demo takes well over the 60s default
+    timeout: 240_000,
+    // The search tabs are gruim modules, so the federation remote has to be
+    // reachable: export these two before running, the way rebuild.sh does.
+    env: {
+      SVELTE_APP_API_URL: 'http://localhost:3333',
+      CACHE_CONTAINER_NAME: process.env.CACHE_CONTAINER_NAME ?? '',
+      SVELTE_APP_CACHE_REMOTE_URL: process.env.SVELTE_APP_CACHE_REMOTE_URL ?? '',
+    },
   },
 });
