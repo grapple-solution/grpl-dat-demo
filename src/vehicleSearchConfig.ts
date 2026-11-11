@@ -140,6 +140,7 @@ export const vehicleFilterTranslation: Record<string, string> = {
   ModelRange: "Model range (OTG)",
   ModelGroup: "Model group (HT)",
   Model: "Model (UT)",
+  id: "Date code",
   dateCode: "Date code",
   fzab: "Vehicle type (FZA)",
   hstb: "Manufacturer (HST)",
@@ -156,7 +157,7 @@ export const vehicleFilterTranslation: Record<string, string> = {
 export const vehicleSearchSchema = {
   "field-properties": {
     "field-order": [
-      "dateCode",
+      "id",
       "fzab",
       "hstb",
       "otgb",
@@ -170,6 +171,7 @@ export const vehicleSearchSchema = {
     ],
     "auto-generated-fields": ["globalSearch"],
     "hidden-fields": [
+      "dateCode",
       "fza",
       "hst",
       "ht",
