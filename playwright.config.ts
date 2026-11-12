@@ -13,6 +13,12 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  // fail with a clear message when the gruim remote or the API is missing
+  globalSetup: './tests/global-setup.ts',
+  // A tab switch waits for a module federation chunk, not just a render, so
+  // both budgets are wider than the Playwright defaults.
+  timeout: 60_000,
+  expect: { timeout: 15_000 },
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -72,8 +78,17 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'SVELTE_APP_API_URL=http://localhost:3333 npm run start -- --no-open --port 4010',
+    command: 'npm run start -- --no-open --port 4010',
     url: 'http://127.0.0.1:4010',
     reuseExistingServer: !process.env.CI,
+    // the first rspack build of the demo takes well over the 60s default
+    timeout: 240_000,
+    // The search tabs are gruim modules, so the federation remote has to be
+    // reachable: export these two before running, the way rebuild.sh does.
+    env: {
+      SVELTE_APP_API_URL: 'http://localhost:3334/dsearchtree',
+      CACHE_CONTAINER_NAME: process.env.CACHE_CONTAINER_NAME ?? '',
+      SVELTE_APP_CACHE_REMOTE_URL: process.env.SVELTE_APP_CACHE_REMOTE_URL ?? '',
+    },
   },
 });

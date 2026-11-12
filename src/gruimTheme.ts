@@ -9,17 +9,22 @@
 export const adminModuleCss = `
   color: rgb(var(--dat-ink));
   --background: rgb(var(--dat-surface));
-  --borderFocusColor: rgb(var(--dat-accent));
-  --borderHoverColor: rgb(var(--dat-line-strong));
-  --disabledBackground: rgb(var(--dat-sunken));
-  --disabledColor: rgb(var(--dat-muted));
-  --inputColor: rgb(var(--dat-ink));
-  --itemColor: rgb(var(--dat-ink));
-  --itemHoverBG: rgb(var(--dat-accent-soft));
-  --itemIsActiveBG: rgb(var(--dat-accent-soft));
-  --listBackground: rgb(var(--dat-surface));
-  --placeholderColor: rgb(var(--dat-muted));
-  --selectedItemColor: rgb(var(--dat-ink));
+  /* svelte-select 5 reads kebab-case names; it redefines the camelCase ones
+     from them, so setting those has no effect at all. --border-focused and
+     --border-hover are whole borders in v5, not colours. */
+  --border-focused: 1px solid rgb(var(--dat-accent));
+  --border-hover: 1px solid rgb(var(--dat-line-strong));
+  --disabled-background: rgb(var(--dat-sunken));
+  --disabled-color: rgb(var(--dat-muted));
+  --disabled-border-color: rgb(var(--dat-line));
+  --disabled-placeholder-color: rgb(var(--dat-muted));
+  --input-color: rgb(var(--dat-ink));
+  --item-color: rgb(var(--dat-ink));
+  --item-hover-bg: rgb(var(--dat-accent-soft));
+  --item-is-active-bg: rgb(var(--dat-accent-soft));
+  --list-background: rgb(var(--dat-surface));
+  --placeholder-color: rgb(var(--dat-muted));
+  --selected-item-color: rgb(var(--dat-ink));
 }
 
 #admin-list-table {
@@ -84,12 +89,35 @@ export const adminModuleCss = `
   background: rgb(var(--dat-accent-soft)) !important;
 }
 
+/* The search view has inputs of its own, outside the table. They sit beside
+   svelte-select controls, so they take the same surface, border and radius
+   rather than the browser default. */
 #admin-list-table input,
 #admin-list-table select,
-#admin-list-table textarea {
+#admin-list-table textarea,
+input[type="text"]:not(.svelte-select input),
+input[type="number"]:not(.svelte-select input),
+input[type="search"]:not(.svelte-select input) {
   background: rgb(var(--dat-surface)) !important;
   color: rgb(var(--dat-ink)) !important;
   border-color: rgb(var(--dat-line)) !important;
+}
+
+input[type="text"]:not(.svelte-select input),
+input[type="number"]:not(.svelte-select input),
+input[type="search"]:not(.svelte-select input) {
+  border-width: 1px;
+  border-style: solid;
+  border-radius: var(--border-radius, 6px);
+  min-height: var(--height, 42px);
+}
+
+/* A disabled or loading button keeps Tailwind's bg-gray-200, which is a pale
+   block on this page. */
+button[class*="bg-gray-200"]:not([class*="rounded-full"]) {
+  background: rgb(var(--dat-sunken)) !important;
+  border-color: rgb(var(--dat-line)) !important;
+  color: rgb(var(--dat-muted)) !important;
 }
 
 #admin-list-table input[type="checkbox"] {

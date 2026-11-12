@@ -1,4 +1,13 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+import { vehicleFilterTranslation as T } from '../src/vehicleSearchConfig';
+
+/**
+ * The search tabs are gruim modules loaded over module federation, so these
+ * tests drive gruim's own markup: svelte-select dropdowns for the filters and
+ * a Load More button under the result table. Nothing here targets DAT markup
+ * beyond the two tab buttons and the headings.
+ */
 
 const vehicle = {
   fza: 1,
@@ -16,207 +25,227 @@ const vehicle = {
   kw: '140',
 };
 
+/** The fuzzy operation answers with an envelope; the module unwraps `item`. */
+const hit = (row: unknown) => ({ item: row, score: 1 });
+
+const filterOf = (url: URL) => JSON.parse(url.searchParams.get('filter') || '{}');
+
+/** The path as the schema spells it, without gruim's proxy and app prefix. */
+const apiPath = (url: URL) => url.pathname.replace('/api/dsearchtree', '');
+
 test.beforeEach(async ({ page }) => {
-  await page.route('http://localhost:3333/**', async (route) => {
+  // gruim rewrites every call to its own origin behind an /api proxy, and the
+  // cache layer sits under its app prefix, so match the path and strip both:
+  // what is left reads like the schema, wherever the remote is served from.
+  await page.route('**/api/dsearchtree/**', async (route) => {
     const url = new URL(route.request().url());
+    url.pathname = url.pathname.replace('/api/dsearchtree', '');
     const json = (value: unknown) => route.fulfill({ json: value });
 
     if (url.pathname === '/datecode2s/count') return json({ count: 1 });
-    if (url.pathname === '/datecode2s') {
-      const filter = url.searchParams.get('filter') || '';
-      const parsedFilter = JSON.parse(filter);
-      if (parsedFilter.limit === 1) {
-        const fza = parsedFilter.where.fza;
-        return json([{ fza, fzab: ['Cars', 'Vans', 'Motorcycles', 'Trucks', 'Buses'][fza - 1] }]);
-      }
-      return json([vehicle]);
-    }
-    if (url.pathname === '/brands') return json([{ HST: '130', HSTB: 'BMW' }]);
-    if (url.pathname === '/modelRanges') return json([{ OTG: '3', OTGB: '3' }]);
-    if (url.pathname === '/modelGroups') return json([{ HT: '42', HTB: '3er (G20)' }]);
-    if (url.pathname === '/models') return json([{ UT: '7', UTB: '320d xDrive' }]);
-    if (url.pathname === '/dsearchtrees/datecode2s/fuzzy/BMW%20diesel%20automatic') {
-      const filter = JSON.parse(url.searchParams.get('filter') || '{}');
-      return json(filter.limit === 1 ? [] : [vehicle]);
-    }
-    if (url.pathname === '/brandsByVehicleType') return json([{ FZA: '1', HST: '130', HSTB: 'BMW' }]);
-    if (url.pathname === '/modelRangeByVehicleTypeAndManufacturer') return json([{ OTG: '3', OTGB: '3' }]);
-    if (url.pathname === '/modelGroupByVehicleTypeAndManufacturerAndModelRange') return json([{ HT: '42', HTB: '3er (G20)' }]);
-    if (url.pathname === '/modelByVehicleTypeAndManufacturerAndModelGroup') return json([{ UT: '7', UTB: '320d xDrive' }]);
+    if (url.pathname === '/datecode2s') return json([vehicle]);
+
+    // the five drill-down controllers, each narrowed by the ones above it
+    // two of them, so a test can actually change the top of the chain
+    if (url.pathname === '/vehicleTypes')
+      return json([
+        { FZA: '1', FZAB: 'Pkw, SUV, Kleintransporter' },
+        { FZA: '2', FZAB: 'Lkw' },
+      ]);
+    if (url.pathname === '/brands')
+      return json([{ HST: '130', HSTB: 'BMW' }]);
+    if (url.pathname === '/modelRanges')
+      return json([{ OTG: '3', OTGB: '3' }]);
+    if (url.pathname === '/modelGroups')
+      return json([{ HT: '42', HTB: '3er (G20)' }]);
+    if (url.pathname === '/models')
+      return json([{ UT: '7', UTB: '320d xDrive' }]);
+    if (url.pathname === '/brandsByVehicleType')
+      return json([{ FZA: '1', HST: '130', HSTB: 'BMW' }]);
+    if (url.pathname === '/modelRangeByVehicleTypeAndManufacturer')
+      return json([{ OTG: '3', OTGB: '3' }]);
+    if (url.pathname === '/modelGroupByVehicleTypeAndManufacturerAndModelRange')
+      return json([{ HT: '42', HTB: '3er (G20)' }]);
+    if (url.pathname === '/modelByVehicleTypeAndManufacturerAndModelGroup')
+      return json([{ UT: '7', UTB: '320d xDrive' }]);
+
+    if (apiPath(url).startsWith('/dsearchtrees/datecode2s/fuzzy/'))
+      return json([hit(vehicle)]);
+
     return route.fulfill({ status: 404, json: { error: { message: 'Not mocked' } } });
   });
 });
 
-test('loads the structured search tree and lists vehicles', async ({ page }) => {
+/**
+ * The select under a filter's heading. Addressing it by placeholder only works
+ * while nothing is picked: svelte-select drops the placeholder once it is.
+ */
+const filterControl = (page: Page, label: string) =>
+  page.locator(
+    `xpath=//div[normalize-space(text())=${JSON.stringify(label)}]` +
+      `/following-sibling::div[contains(@class,"svelte-select")][1]`,
+  );
+
+/** Opens a gruim distinct filter by its heading and picks one of its values. */
+async function pickFilter(page: Page, label: string, option: string) {
+  // click the input, not the control: it carries the disabled state, so the
+  // click waits for the filter to be ready instead of landing on a dead div
+  await filterControl(page, label).locator('input').first().click();
+  await page.locator('.svelte-select-list').getByText(option, { exact: true }).click();
+}
+
+/** Searches an independent type-ahead filter and selects its result. */
+async function searchFilter(page: Page, label: string, query: string, option: string) {
+  await filterControl(page, label).locator('input').first().fill(query);
+  await page.locator('.svelte-select-list').getByText(option, { exact: true }).click();
+}
+
+const openTab = (page: Page, name: string) =>
+  page.getByRole('button', { name, exact: true }).click();
+
+test('guided search drills down and lists the vehicle', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Vehicle search' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Find a vehicle step by step' }),
+  ).toBeVisible();
 
-  await page.locator('#tree-fza').selectOption('1');
-  await page.locator('#tree-hst').selectOption('130');
-  await page.locator('#tree-otg').selectOption('3');
-  await page.locator('#tree-ht').selectOption('42');
-  await page.locator('#tree-ut').selectOption('7');
-  await page.getByRole('button', { name: 'Find vehicles' }).click();
+  // each dropdown stays disabled until the one it depends on has a value
+  await expect(page.getByPlaceholder(T.Manufacturer, { exact: true })).toBeDisabled();
 
-  await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: '320d xDrive' })).toBeVisible();
+  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
+  await pickFilter(page, T.Manufacturer, 'BMW');
+  await pickFilter(page, T.ModelRange, '3');
+  await pickFilter(page, T.ModelGroup, '3er (G20)');
+  await pickFilter(page, T.Model, '320d xDrive');
+
+  await expect(page.getByRole('cell', { name: 'BMW' }).first()).toBeVisible();
+  await expect(page.getByRole('cell', { name: '320d xDrive' }).first()).toBeVisible();
 });
 
-test('runs fuzzy text search with optional criteria', async ({ page }) => {
+test('changing a parent clears the dropdowns below it', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Description search' }).click();
-  await page.locator('#fuzzy-text').fill('BMW diesel automatic');
-  await page.locator('#fuzzy-hst').fill('BMW');
-  await page.getByRole('option', { name: 'BMW (130)' }).click();
-  await page.getByRole('button', { name: 'Find vehicles' }).click();
+  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
+  await pickFilter(page, T.Manufacturer, 'BMW');
+  await pickFilter(page, T.ModelRange, '3');
+  await pickFilter(page, T.ModelGroup, '3er (G20)');
 
-  await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
-  await expect(page.getByText('1 vehicle', { exact: false })).toBeVisible();
+  // changing the top of the chain has to reset everything under it, not just
+  // the next one down. Re-picking the same value is not a change: svelte-select
+  // reports none, so this has to switch to a different vehicle type.
+  await pickFilter(page, T.VehicleType, 'Lkw');
+
+  for (const label of [T.ModelRange, T.ModelGroup, T.Model]) {
+    await expect(page.getByPlaceholder(label, { exact: true })).toBeDisabled();
+  }
 });
 
-test('clears the fuzzy search and all filters', async ({ page }) => {
+test('description search sends the term and unwraps the result envelope', async ({ page }) => {
+  const requests: URL[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (apiPath(url).startsWith('/dsearchtrees/datecode2s/fuzzy/')) requests.push(url);
+  });
+
   await page.goto('/');
-  await page.getByRole('button', { name: 'Description search' }).click();
-  await page.locator('#fuzzy-text').fill('BMW diesel automatic');
-  await page.locator('#fuzzy-fza').selectOption('1');
-  await page.locator('#fuzzy-hst').fill('BMW');
-  await page.getByRole('option', { name: 'BMW (130)' }).click();
-  await page.getByRole('button', { name: 'Find vehicles' }).click();
-  await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
+  await openTab(page, 'Description search');
+  await page.getByLabel('Vehicle description', { exact: true }).fill('BMW diesel automatic');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
 
-  await page.getByRole('button', { name: 'Clear all' }).click();
+  await expect(page.getByRole('cell', { name: '320d xDrive' }).first()).toBeVisible();
 
-  await expect(page.locator('#fuzzy-text')).toHaveValue('');
-  await expect(page.locator('#fuzzy-fza')).toHaveValue('');
-  await expect(page.locator('#fuzzy-hst')).toHaveValue('');
-  await expect(page.getByRole('cell', { name: 'BMW' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Clear all' })).toBeDisabled();
+  expect(requests).not.toHaveLength(0);
+  const first = requests[0];
+  expect(first.pathname).toContain('BMW%20diesel%20automatic');
+  expect(first.searchParams.get('useGlobalSearch')).toBe('false');
+  // one over the page size, so the module knows whether to offer Load More
+  expect(filterOf(first)).toMatchObject({ limit: 101, skip: 0 });
 });
 
-test('pages fuzzy results without loading the complete result set', async ({ page }) => {
-  await page.route('**/datecode2s/count*', (route) => route.fulfill({ json: { count: 101 } }));
-  await page.route('**/dsearchtrees/datecode2s/fuzzy/Dacia*', async (route) => {
-    const url = new URL(route.request().url());
-    const filter = JSON.parse(url.searchParams.get('filter') || '{}');
-    const start = filter.skip || 0;
-    const count = start === 0 ? 100 : 1;
-    await route.fulfill({
-      json: Array.from({ length: count }, (_, index) => ({
-        ...vehicle,
-        hstb: 'Dacia',
-        dateCode: String(start + index + 1).padStart(15, '0'),
-      })),
+test('description search narrows by filter and pages with Load More', async ({ page }) => {
+  const filters: Record<string, unknown>[] = [];
+  const lastFilter = () => filters[filters.length - 1];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (apiPath(url).startsWith('/dsearchtrees/datecode2s/fuzzy/')) filters.push(filterOf(url));
+  });
+
+  await page.route('**/dsearchtrees/datecode2s/fuzzy/**', async (route) => {
+    const filter = filterOf(new URL(route.request().url()));
+    // a full page plus one keeps Load More alive on the first request only
+    const rows = filter.skip
+      ? [hit({ ...vehicle, utb: 'second page' })]
+      : Array.from({ length: 101 }, () => hit(vehicle));
+    return route.fulfill({ json: rows });
+  });
+
+  await page.goto('/');
+  await openTab(page, 'Description search');
+  await page.getByLabel('Vehicle description', { exact: true }).fill('BMW');
+  for (const label of [T.Manufacturer, T.ModelRange, T.ModelGroup, T.Model]) {
+    await expect(page.getByPlaceholder(label, { exact: true })).toBeEnabled();
+  }
+  await searchFilter(page, T.Manufacturer, 'BMW', 'BMW');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+
+  await expect(page.getByRole('cell', { name: 'BMW' }).first()).toBeVisible();
+  // the dropdown narrows the same filter the caller already set
+  expect(lastFilter()).toMatchObject({ where: { hst: '130' }, limit: 101, skip: 0 });
+
+  await page.getByRole('button', { name: 'Load More', exact: true }).click();
+  await expect(page.getByRole('cell', { name: 'second page' })).toBeVisible();
+  expect(lastFilter()).toMatchObject({ limit: 101, skip: 100 });
+});
+
+test('a filter changed mid-request still decides the result', async ({ page }) => {
+  let seen = 0;
+  await page.route('**/dsearchtrees/datecode2s/fuzzy/**', async (route) => {
+    const where = filterOf(new URL(route.request().url())).where || {};
+    // hold the first response back so the second overtakes it
+    if (++seen === 1) await new Promise((done) => setTimeout(done, 1500));
+    return route.fulfill({
+      json: [hit({ ...vehicle, utb: where.hst ? 'narrowed' : 'unfiltered' })],
     });
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Description search' }).click();
-  await page.locator('#fuzzy-text').fill('Dacia');
-  await page.getByRole('button', { name: 'Find vehicles' }).click();
+  await openTab(page, 'Description search');
+  await page.getByLabel('Vehicle description', { exact: true }).fill('BMW');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
 
-  await expect(page.getByText('1–100 of 101 vehicles')).toBeVisible();
-  await expect(page.getByText('Page 1 of 2')).toBeVisible();
-  const nextRequest = page.waitForRequest((request) => {
-    if (!request.url().includes('/fuzzy/Dacia')) return false;
-    const filter = JSON.parse(new URL(request.url()).searchParams.get('filter') || '{}');
-    return filter.skip === 100 && filter.limit === 100;
-  });
-  await page.getByRole('button', { name: 'Next' }).click();
-  await nextRequest;
-  await expect(page.getByText('101–101 of 101 vehicles')).toBeVisible();
-  await expect(page.getByText('Page 2 of 2')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled();
+  // while that request is still open, narrow the search
+  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
+  await searchFilter(page, T.Manufacturer, 'BMW', 'BMW');
+
+  // the slower, wider answer must not win
+  await expect(page.getByRole('cell', { name: 'narrowed' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'unfiltered' })).toHaveCount(0);
 });
 
-test('resets the dependent selects to their placeholder', async ({ page }) => {
+test('leaving a tab tears the module down', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#tree-fza').selectOption('1');
-  await expect(page.locator('#tree-hst')).toBeEnabled();
-  await page.locator('#tree-hst').selectOption('130');
-  await expect(page.locator('#tree-otg')).toBeEnabled();
-  await page.locator('#tree-otg').selectOption('3');
+  await expect(page.getByPlaceholder(T.VehicleType, { exact: true })).toHaveCount(1);
 
-  await page.locator('#tree-fza').selectOption('2');
+  await openTab(page, 'Description search');
+  await openTab(page, 'Guided search');
 
-  for (const id of ['#tree-hst', '#tree-otg', '#tree-ht', '#tree-ut']) {
-    await expect(page.locator(id)).toHaveValue('');
-    // A select holding a value none of its options offer renders blank, which
-    // is the regression: the placeholder has to be the selected option.
-    await expect(page.locator(`${id} option:checked`)).toHaveCount(1);
-  }
+  // a module left mounted would leave its dropdowns behind as a second copy
+  await expect(page.getByPlaceholder(T.VehicleType, { exact: true })).toHaveCount(1);
+  await expect(
+    page.getByRole('heading', { name: 'Find a vehicle step by step' }),
+  ).toBeVisible();
 });
 
-test('drops the pager when the criteria change', async ({ page }) => {
-  // Enough matches for a second page, so the pager is there to disappear.
-  await page.route('**/datecode2s/count*', (route) => route.fulfill({ json: { count: 7664 } }));
+test('clear empties the search, the filters and the table', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#tree-fza').selectOption('1');
-  await page.getByRole('button', { name: 'Find vehicles' }).click();
-  await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
-  await expect(page.getByRole('navigation', { name: 'Result pages' })).toBeVisible();
+  await openTab(page, 'Description search');
+  await page.getByLabel('Vehicle description', { exact: true }).fill('BMW diesel automatic');
+  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page.getByRole('cell', { name: '320d xDrive' }).first()).toBeVisible();
 
-  // Changing a criterion clears the rows; a pager offering pages for a search
-  // that no longer exists is the regression.
-  await page.locator('#tree-fza').selectOption('2');
-  await expect(page.getByRole('cell', { name: 'BMW' })).toHaveCount(0);
-  await expect(page.getByRole('navigation', { name: 'Result pages' })).toHaveCount(0);
-});
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
 
-test('keeps the table head on the table at every width', async ({ page }) => {
-  for (const width of [1440, 1075, 1000, 820]) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto('/');
-    await page.locator('#tree-fza').selectOption('1');
-    await page.getByRole('button', { name: 'Find vehicles' }).click();
-    await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
-
-    // An overflow on any ancestor makes it the sticky scroll container, and the
-    // head is then offset inside the table instead of pinned below the header.
-    const offset = await page.evaluate(() => {
-      const head = document.querySelector('thead')!.getBoundingClientRect();
-      const table = document.querySelector('table')!.getBoundingClientRect();
-      return Math.round(head.top - table.top);
-    });
-    expect(offset, `head offset at ${width}px`).toBe(0);
-
-    // The head must never ride above the page header, and the table must fit:
-    // a horizontal scroller would reintroduce the container that breaks both.
-    await page.mouse.wheel(0, 700);
-    const after = await page.evaluate(() => ({
-      head: Math.round(document.querySelector('thead')!.getBoundingClientRect().top),
-      header: Math.round(document.querySelector('header')!.getBoundingClientRect().bottom),
-      overflows: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    }));
-    expect(after.head, `head above the page header at ${width}px`).toBeGreaterThanOrEqual(after.header);
-    expect(after.overflows, `page scrolls sideways at ${width}px`).toBe(false);
-  }
-});
-
-test('keeps the submit button filled when gruim styles load', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Description search' }).click();
-  await page.locator('#fuzzy-text').fill('BMW diesel automatic');
-
-  // The gruim remote injects Tailwind's preflight into this document. Its
-  // [type='submit'] rule ties with a utility class and wins on load order.
-  await page.addStyleTag({
-    content: "button,[type='button'],[type='reset'],[type='submit']{background-color:transparent;background-image:none}",
-  });
-
-  const filled = await page.getByRole('button', { name: 'Find vehicles' })
-    .evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(filled).not.toBe('rgba(0, 0, 0, 0)');
-});
-
-test('keeps the search icon clear of the text when gruim styles load', async ({ page }) => {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Description search' }).click();
-
-  // gruim ships its own copy of the same utilities. A later .px-3.5 ties with
-  // .search-field and would pull the text back under the magnifier.
-  await page.addStyleTag({ content: '.px-3\\.5{padding-left:0.875rem;padding-right:0.875rem}' });
-
-  const padding = await page.locator('#fuzzy-hst')
-    .evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft));
-  expect(padding).toBeGreaterThan(30);
+  await expect(page.getByLabel('Vehicle description', { exact: true })).toHaveValue('');
+  await expect(page.getByRole('cell', { name: '320d xDrive' })).toHaveCount(0);
+  await expect(filterControl(page, T.Manufacturer)).toHaveText('');
 });

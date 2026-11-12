@@ -4,14 +4,14 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 
 ## Scope
 
-- Cascading vehicle search: `FZA → HST → OTG → HT → UT`
+- Generated gruim cascading vehicle search: `FZA → HST → OTG → HT → UT`
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
 - A browse tab that embeds the cache-layer gruim admin module for `datecode2`
 
 Vehicle queries go through the Redis-backed layer-two API, which caches layer
-one's OpenAPI proxy. Search-tree options, fuzzy search and vehicle lists all use
-this cache layer.
+one's OpenAPI proxy. The generated search and admin modules, fuzzy search and
+vehicle lists all use this cache layer.
 
 ## Project structure
 
@@ -67,8 +67,15 @@ anything that has been shared in plain text.
 
 The Grapple backend configuration lives in `chart/values.yaml`: the datasource
 shape, discovery and REST CRUD configuration, the fuzzy search configuration,
-and the nine SQL controllers. The generated admin module receives its
-bulk-operation configuration in `src/BrowseTable.svelte`.
+and the nine SQL controllers.
+
+The frontend side of that is `src/vehicleSearchConfig.ts`: it describes the
+five dependent Guided search dropdowns and the independent optional filters
+used by Description search. Both tabs read it, so a change to the search
+normally means editing that one file. `src/TreeSearch.svelte` and
+`src/FuzzySearch.svelte` only pass it on, together with the options that differ between the
+two (the search input, the fixed operation parameters, the page size), and
+`src/GeneratedSearch.svelte` mounts the module and tears it down again.
 
 ## Local frontend development
 
@@ -83,8 +90,9 @@ pnpm dev
 The frontend is available at <http://localhost:4000>.
 `SVELTE_APP_API_URL` must point to the cached API including its `/dsearchtree`
 prefix. `SVELTE_APP_TREE_API_URL` is an optional direct-API override and is
-empty by default. The All vehicles tab additionally requires the generated
-cache-layer gruim remote, which this frontend-only workflow does not start.
+empty by default. The Guided search and All vehicles tabs additionally require
+the generated cache-layer gruim remote, which this frontend-only workflow does
+not start.
 
 ## Complete Docker setup
 
@@ -101,12 +109,12 @@ layer-two proxy at <http://localhost:3334>, and the demo UI at
 controllers and can take approximately two minutes. Layer two uses layer one's
 internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
-Docker Compose does not start either gruim service. The browse tab loads
-`AppCache/dsearchtreeDatecode2` from the cache-layer gruim over module
-federation, so it is unavailable in this standalone Docker setup. The module is
-imported on demand and the tab reports a clear error when the remote is absent.
-Vehicle queries still go to the cached grapi through the `/dsearchtree` prefix,
-including the search-tree option lists.
+Docker Compose does not start either gruim service. The Guided search and browse
+tabs load `AppCache/dsearchtreeDatecode2` from the cache-layer gruim over module
+federation, so they are unavailable in this standalone Docker setup. The module
+is imported on demand and the tabs report a clear error when the remote is
+absent. Description-search requests still go to the cached grapi through the
+`/dsearchtree` prefix.
 
 ## API behavior
 
@@ -115,21 +123,17 @@ parameters through the cache layer, prevents duplicate `where` parameters and
 applies fuzzy matching before pagination. `RestDefaultLimit=1000` gives
 unpaginated REST list calls a safe default on both layers.
 
-The option lists behind HST, OTG, HT and UT are search driven. They query from
-the second character, debounced by 250 ms, and the previous request is aborted
-when the next keystroke arrives. Each query splits its name and code branches
-into a `UNION` so both can use an index: an `OR` across two columns makes MySQL
-abandon the range scan and read the whole index, which measured 1.324 s against
-0.021 s for the same search. The matching indexes are created beside the seed,
-only when absent.
+The generated Guided search module narrows `FZA → HST → OTG → HT → UT` through
+dependent SQL-controller filters. Description search provides the same criteria
+as independent optional type-ahead filters. Gruim resolves their values into
+`sqlParams` and applies the selected criteria to the repository filter.
 
 Fuzzy search uses
 `/dsearchtree/dsearchtrees/datecode2s/fuzzy/{searchTerm}` through the cache
-prefix. Its configuration includes `databaseName: dsearchtree`. The client
-sends search terms, criteria, limit and offset in the repository filter. The UI
-pages fuzzy results at 100 rows and runs a matching count query
-once per search, so both the current range and the total number of results are
-shown without loading the complete result set.
+prefix. Its configuration includes `databaseName: dsearchtree`. The generated
+gruim module sends the search term, selected criteria, limit and offset in the
+repository filter and pages results at 100 rows without loading the complete
+result set.
 
 ## Staying inside the memory budget
 
@@ -186,10 +190,11 @@ datasource is named `redis` rather than `redisDS` because a Crossplane
 `ManagedDataSource` name has to be an RFC 1123 subdomain, and an uppercase
 letter makes the release fail.
 
-The cache layer has its own gruim. The browse tab loads
-`AppCache/dsearchtreeDatecode2` from it, while all vehicle-search API calls use
-the cache layer. After an API upgrade, flush Redis so responses cached by an older
-version are not retained for the configured 100-minute TTL.
+The cache layer has its own gruim. The Guided search and browse tabs configure
+and load its generated `AppCache/dsearchtreeDatecode2` module, while all
+vehicle-search API calls use the cache layer. After an API upgrade, flush Redis
+so responses cached by an older version are not retained for the configured
+100-minute TTL.
 
 Helm's own commands need the cluster lookups disabled to run offline, in this
 chart and in the other Grapple demos alike:
@@ -207,11 +212,29 @@ pnpm exec playwright install --with-deps   # first run only
 pnpm test
 ```
 
-The three Playwright tests stub every API response, so they cover the screens but
-not the DAT integration. Verify that against a running API. They start their own
-dev server on port 4010, away from the one `pnpm dev` uses, because a server
-left running on the shared port is reused without the test environment and every
-mocked call then misses.
+The Playwright tests drive the generated gruim modules, so they need a gruim
+remote to load them from and a live API behind it:
+
+```sh
+docker compose up                              # the two DAT API layers
+
+# in a gruim checkout — this overwrites its generated assets for whichever API
+# it was last built against, so keep a copy if that setup still matters
+OPENAPI_URL=http://localhost:3334/openapi.json node parseOpenApiSchema.js
+node generateModules.js
+MF_NAME=AppCacheLocal SVELTE_APP_API_ENDPOINT=http://localhost:3334 pnpm start
+
+SVELTE_APP_CACHE_REMOTE_URL=http://localhost:8080 \
+  CACHE_CONTAINER_NAME=AppCacheLocal pnpm test
+```
+
+Generate against the cache layer: its app prefix is what gives the modules the
+names the demo imports. The tests stub the data the modules ask for, so they
+cover the screens but not the DAT data — verify that against a running API. The
+schema still comes from the live API through the remote's own `/api` proxy.
+They start their own dev server on port 4010, away from the one `pnpm dev` uses,
+because a server left running on the shared port is reused without the test
+environment and every mocked call then misses.
 
 ## Secrets
 

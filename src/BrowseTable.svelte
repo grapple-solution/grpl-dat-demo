@@ -17,6 +17,7 @@
           props: {
             css: adminModuleCss,
             translation: {
+              id: "Date code",
               dateCode: "Date code",
               fzab: "Vehicle type",
               hstb: "Manufacturer",
@@ -34,11 +35,12 @@
               "bulk-page-size": 5000,
               "field-properties": {
                 "field-order": [
-                  "dateCode", "fzab", "hstb", "otgb", "htb", "utb",
+                  "id", "fzab", "hstb", "otgb", "htb", "utb",
                   "avMoB", "ccm", "kw", "antr", "ab",
                 ],
                 "auto-generated-fields": ["globalSearch"],
                 "hidden-fields": [
+                  "dateCode",
                   "fza", "hst", "ht", "ut", "otg", "avMo", "avKa", "avGe",
                   "aZyl", "ats", "rSt", "kSt", "kZbewert", "kZkalk", "kzGlas",
                   "globalSearch",
