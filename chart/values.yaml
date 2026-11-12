@@ -25,7 +25,6 @@ grases:
         maxReplicas: 3
       extraSecrets:
         - dat-demo-db-mysql-account-root
-        - dat-sqlcontrollers
       env:
         - name: RestDefaultLimit
           value: "1000"
@@ -60,6 +59,11 @@ grases:
       fuzzysearch:
         - name: datecode2
           content: 'dsearchtree:{"fuzzy":true,"centralFuzzy":false,"datasource":"dsearchtree","databaseName":"dsearchtree","appName":"Grpl","include":"datecode2","subPath":""}'
+      drilldownconfigs:
+        - name: vehicle
+          content: 'vehicle:{"model":"Datecode2","levels":[{"field":"fza","label":"fzab"},{"field":"hst","label":"hstb"},{"field":"otg","label":"otgb"},{"field":"ht","label":"htb"},{"field":"ut","label":"utb","dependsOn":["fza","hst","ht"]}]}'
+        - name: vehicle-search
+          content: 'vehicle-search:{"model":"Datecode2","levels":[{"field":"fza","label":"fzab","optional":true},{"field":"hst","label":"hstb","optional":true},{"field":"otg","label":"otgb","optional":true},{"field":"ht","label":"htb","optional":true},{"field":"ut","label":"utb","dependsOn":["fza","hst","ht"],"optional":true}]}'
       models: []
       repositories: []
       relations: []

@@ -33,6 +33,28 @@ const filterOf = (url: URL) => JSON.parse(url.searchParams.get('filter') || '{}'
 /** The path as the schema spells it, without gruim's proxy and app prefix. */
 const apiPath = (url: URL) => url.pathname.replace('/api/dsearchtree', '');
 
+const labels = {
+  vehicleType: T.fza,
+  manufacturer: T.hst,
+  modelRange: T.otg,
+  modelGroup: T.ht,
+  model: T.ut,
+};
+
+const drilldown = (name: string, optional: boolean) => ({
+  name,
+  model: 'Datecode2',
+  limit: 1000,
+  noneValue: '__none__',
+  levels: [
+    { field: 'fza', label: 'fzab', dependsOn: [], optional, path: `/drilldowns/${name}/fza` },
+    { field: 'hst', label: 'hstb', dependsOn: ['fza'], optional, path: `/drilldowns/${name}/hst` },
+    { field: 'otg', label: 'otgb', dependsOn: ['fza', 'hst'], optional, path: `/drilldowns/${name}/otg` },
+    { field: 'ht', label: 'htb', dependsOn: ['fza', 'hst', 'otg'], optional, path: `/drilldowns/${name}/ht` },
+    { field: 'ut', label: 'utb', dependsOn: ['fza', 'hst', 'ht'], optional, path: `/drilldowns/${name}/ut` },
+  ],
+});
+
 test.beforeEach(async ({ page }) => {
   // gruim rewrites every call to its own origin behind an /api proxy, and the
   // cache layer sits under its app prefix, so match the path and strip both:
@@ -45,30 +67,21 @@ test.beforeEach(async ({ page }) => {
     if (url.pathname === '/datecode2s/count') return json({ count: 1 });
     if (url.pathname === '/datecode2s') return json([vehicle]);
 
-    // the five drill-down controllers, each narrowed by the ones above it
-    // two of them, so a test can actually change the top of the chain
-    if (url.pathname === '/vehicleTypes')
+    if (url.pathname === '/drilldowns/vehicle') return json(drilldown('vehicle', false));
+    if (url.pathname === '/drilldowns/vehicle-search') return json(drilldown('vehicle-search', true));
+    if (url.pathname.endsWith('/fza'))
       return json([
-        { FZA: '1', FZAB: 'Pkw, SUV, Kleintransporter' },
-        { FZA: '2', FZAB: 'Lkw' },
+        { value: '1', label: 'Pkw, SUV, Kleintransporter' },
+        { value: '2', label: 'Lkw' },
       ]);
-    if (url.pathname === '/brands')
-      return json([{ HST: '130', HSTB: 'BMW' }]);
-    if (url.pathname === '/modelRanges')
-      return json([{ OTG: '3', OTGB: '3' }]);
-    if (url.pathname === '/modelGroups')
-      return json([{ HT: '42', HTB: '3er (G20)' }]);
-    if (url.pathname === '/models')
-      return json([{ UT: '7', UTB: '320d xDrive' }]);
-    if (url.pathname === '/brandsByVehicleType')
-      return json([{ FZA: '1', HST: '130', HSTB: 'BMW' }]);
-    if (url.pathname === '/modelRangeByVehicleTypeAndManufacturer')
-      return json([{ OTG: '3', OTGB: '3' }]);
-    if (url.pathname === '/modelGroupByVehicleTypeAndManufacturerAndModelRange')
-      return json([{ HT: '42', HTB: '3er (G20)' }]);
-    if (url.pathname === '/modelByVehicleTypeAndManufacturerAndModelGroup')
-      return json([{ UT: '7', UTB: '320d xDrive' }]);
-
+    if (url.pathname.endsWith('/hst'))
+      return json([{ value: '130', label: 'BMW' }]);
+    if (url.pathname.endsWith('/otg'))
+      return json([{ value: '3', label: '3' }]);
+    if (url.pathname.endsWith('/ht'))
+      return json([{ value: '42', label: '3er (G20)' }]);
+    if (url.pathname.endsWith('/ut'))
+      return json([{ value: '7', label: '320d xDrive' }]);
     if (apiPath(url).startsWith('/dsearchtrees/datecode2s/fuzzy/'))
       return json([hit(vehicle)]);
 
@@ -104,19 +117,33 @@ const openTab = (page: Page, name: string) =>
   page.getByRole('button', { name, exact: true }).click();
 
 test('guided search drills down and lists the vehicle', async ({ page }) => {
+  const requests: URL[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (apiPath(url).startsWith('/drilldowns/vehicle/')) requests.push(url);
+  });
+
   await page.goto('/');
   await expect(
     page.getByRole('heading', { name: 'Find a vehicle step by step' }),
   ).toBeVisible();
 
   // each dropdown stays disabled until the one it depends on has a value
-  await expect(page.getByPlaceholder(T.Manufacturer, { exact: true })).toBeDisabled();
+  await expect(page.getByPlaceholder(labels.manufacturer, { exact: true })).toBeDisabled();
 
-  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
-  await pickFilter(page, T.Manufacturer, 'BMW');
-  await pickFilter(page, T.ModelRange, '3');
-  await pickFilter(page, T.ModelGroup, '3er (G20)');
-  await pickFilter(page, T.Model, '320d xDrive');
+  await pickFilter(page, labels.vehicleType, 'Pkw, SUV, Kleintransporter');
+  await pickFilter(page, labels.manufacturer, 'BMW');
+  await pickFilter(page, labels.modelRange, '3');
+  await pickFilter(page, labels.modelGroup, '3er (G20)');
+  await pickFilter(page, labels.model, '320d xDrive');
+
+  const manufacturer = requests.find((url) => apiPath(url) === '/drilldowns/vehicle/hst');
+  expect(manufacturer?.searchParams.get('fza')).toBe('1');
+  const model = requests.find((url) => apiPath(url) === '/drilldowns/vehicle/ut');
+  expect(model?.searchParams.get('fza')).toBe('1');
+  expect(model?.searchParams.get('hst')).toBe('130');
+  expect(model?.searchParams.get('ht')).toBe('42');
+  expect(model?.searchParams.has('otg')).toBe(false);
 
   await expect(page.getByRole('cell', { name: 'BMW' }).first()).toBeVisible();
   await expect(page.getByRole('cell', { name: '320d xDrive' }).first()).toBeVisible();
@@ -124,17 +151,17 @@ test('guided search drills down and lists the vehicle', async ({ page }) => {
 
 test('changing a parent clears the dropdowns below it', async ({ page }) => {
   await page.goto('/');
-  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
-  await pickFilter(page, T.Manufacturer, 'BMW');
-  await pickFilter(page, T.ModelRange, '3');
-  await pickFilter(page, T.ModelGroup, '3er (G20)');
+  await pickFilter(page, labels.vehicleType, 'Pkw, SUV, Kleintransporter');
+  await pickFilter(page, labels.manufacturer, 'BMW');
+  await pickFilter(page, labels.modelRange, '3');
+  await pickFilter(page, labels.modelGroup, '3er (G20)');
 
   // changing the top of the chain has to reset everything under it, not just
   // the next one down. Re-picking the same value is not a change: svelte-select
   // reports none, so this has to switch to a different vehicle type.
-  await pickFilter(page, T.VehicleType, 'Lkw');
+  await pickFilter(page, labels.vehicleType, 'Lkw');
 
-  for (const label of [T.ModelRange, T.ModelGroup, T.Model]) {
+  for (const label of [labels.modelRange, labels.modelGroup, labels.model]) {
     await expect(page.getByPlaceholder(label, { exact: true })).toBeDisabled();
   }
 });
@@ -181,10 +208,10 @@ test('description search narrows by filter and pages with Load More', async ({ p
   await page.goto('/');
   await openTab(page, 'Description search');
   await page.getByLabel('Vehicle description', { exact: true }).fill('BMW');
-  for (const label of [T.Manufacturer, T.ModelRange, T.ModelGroup, T.Model]) {
+  for (const label of [labels.manufacturer, labels.modelRange, labels.modelGroup, labels.model]) {
     await expect(page.getByPlaceholder(label, { exact: true })).toBeEnabled();
   }
-  await searchFilter(page, T.Manufacturer, 'BMW', 'BMW');
+  await searchFilter(page, labels.manufacturer, 'BMW', 'BMW');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   await expect(page.getByRole('cell', { name: 'BMW' }).first()).toBeVisible();
@@ -213,8 +240,8 @@ test('a filter changed mid-request still decides the result', async ({ page }) =
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   // while that request is still open, narrow the search
-  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
-  await searchFilter(page, T.Manufacturer, 'BMW', 'BMW');
+  await pickFilter(page, labels.vehicleType, 'Pkw, SUV, Kleintransporter');
+  await searchFilter(page, labels.manufacturer, 'BMW', 'BMW');
 
   // the slower, wider answer must not win
   await expect(page.getByRole('cell', { name: 'narrowed' })).toBeVisible();
@@ -223,13 +250,13 @@ test('a filter changed mid-request still decides the result', async ({ page }) =
 
 test('leaving a tab tears the module down', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByPlaceholder(T.VehicleType, { exact: true })).toHaveCount(1);
+  await expect(page.getByPlaceholder(labels.vehicleType, { exact: true })).toHaveCount(1);
 
   await openTab(page, 'Description search');
   await openTab(page, 'Guided search');
 
   // a module left mounted would leave its dropdowns behind as a second copy
-  await expect(page.getByPlaceholder(T.VehicleType, { exact: true })).toHaveCount(1);
+  await expect(page.getByPlaceholder(labels.vehicleType, { exact: true })).toHaveCount(1);
   await expect(
     page.getByRole('heading', { name: 'Find a vehicle step by step' }),
   ).toBeVisible();
@@ -239,7 +266,7 @@ test('clear empties the search, the filters and the table', async ({ page }) => 
   await page.goto('/');
   await openTab(page, 'Description search');
   await page.getByLabel('Vehicle description', { exact: true }).fill('BMW diesel automatic');
-  await pickFilter(page, T.VehicleType, 'Pkw, SUV, Kleintransporter');
+  await pickFilter(page, labels.vehicleType, 'Pkw, SUV, Kleintransporter');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await expect(page.getByRole('cell', { name: '320d xDrive' }).first()).toBeVisible();
 
@@ -247,5 +274,5 @@ test('clear empties the search, the filters and the table', async ({ page }) => 
 
   await expect(page.getByLabel('Vehicle description', { exact: true })).toHaveValue('');
   await expect(page.getByRole('cell', { name: '320d xDrive' })).toHaveCount(0);
-  await expect(filterControl(page, T.Manufacturer)).toHaveText('');
+  await expect(filterControl(page, labels.manufacturer)).toHaveText('');
 });

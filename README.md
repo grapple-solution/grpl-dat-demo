@@ -4,7 +4,7 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 
 ## Scope
 
-- Generated gruim cascading vehicle search: `FZA → HST → OTG → HT → UT`
+- Native grapi/gruim vehicle drill-down: `FZA → HST → OTG → HT → UT`
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
 - A browse tab that embeds the cache-layer gruim admin module for `datecode2`
@@ -66,16 +66,13 @@ both:
 anything that has been shared in plain text.
 
 The Grapple backend configuration lives in `chart/values.yaml`: the datasource
-shape, discovery and REST CRUD configuration, the fuzzy search configuration,
-and the nine SQL controllers.
+shape, discovery and REST CRUD configuration, the native vehicle drill-downs
+and the fuzzy search configuration. No custom SQL controllers are required.
 
-The frontend side of that is `src/vehicleSearchConfig.ts`: it describes the
-five dependent Guided search dropdowns and the independent optional filters
-used by Description search. Both tabs read it, so a change to the search
-normally means editing that one file. `src/TreeSearch.svelte` and
-`src/FuzzySearch.svelte` only pass it on, together with the options that differ between the
-two (the search input, the fixed operation parameters, the page size), and
-`src/GeneratedSearch.svelte` mounts the module and tears it down again.
+Guided search passes `drilldown: "vehicle"`; Description search passes the
+optional `drilldown: "vehicle-search"`. Gruim reads both definitions from grapi
+and builds the dropdowns. Shared labels remain in `src/vehicleSearchConfig.ts`.
+`src/GeneratedSearch.svelte` mounts each generated module and tears it down.
 
 ## Local frontend development
 
@@ -118,15 +115,15 @@ absent. Description-search requests still go to the cached grapi through the
 
 ## API behavior
 
-Both API layers use `grpl/loopback:0.4.28`. This release preserves SQL-controller
-parameters through the cache layer, prevents duplicate `where` parameters and
-applies fuzzy matching before pagination. `RestDefaultLimit=1000` gives
-unpaginated REST list calls a safe default on both layers.
+Both API layers use `grpl/loopback:0.4.31`, and both generated UI layers use
+`grpl/gruim:0.3.64`. These releases provide the native drill-down endpoints and
+generated cascading dropdowns. `RestDefaultLimit=1000` gives unpaginated REST
+list calls a safe default on both API layers.
 
-The generated Guided search module narrows `FZA → HST → OTG → HT → UT` through
-dependent SQL-controller filters. Description search provides the same criteria
-as independent optional type-ahead filters. Gruim resolves their values into
-`sqlParams` and applies the selected criteria to the repository filter.
+The generated Guided search module reads the native `vehicle` drill-down and
+narrows `FZA → HST → OTG → HT → UT`. Description search reads the optional
+`vehicle-search` drill-down, so any criterion can be selected independently.
+Gruim applies all selected criteria to the repository filter.
 
 Fuzzy search uses
 `/dsearchtree/dsearchtrees/datecode2s/fuzzy/{searchTerm}` through the cache
