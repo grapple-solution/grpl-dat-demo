@@ -16,7 +16,7 @@ grases:
       name: dat-demo
       runimages:
         image: grpl/loopback
-        tag: "0.4.28"
+        tag: "0.4.31"
       discoveredrepos: true
       ingress: true
       ssl: true
@@ -25,10 +25,11 @@ grases:
         maxReplicas: 3
       extraSecrets:
         - dat-demo-db-mysql-account-root
-        - dat-sqlcontrollers
       env:
         - name: RestDefaultLimit
           value: "1000"
+        - name: DrilldownConfig
+          value: 'vehicle:{"model":"Datecode2","levels":[{"field":"fza","label":"fzab"},{"field":"hst","label":"hstb"},{"field":"otg","label":"otgb"},{"field":"ht","label":"htb"},{"field":"ut","label":"utb","dependsOn":["fza","hst","ht"]}]}|vehicle-search:{"model":"Datecode2","levels":[{"field":"fza","label":"fzab","optional":true},{"field":"hst","label":"hstb","optional":true},{"field":"otg","label":"otgb","optional":true},{"field":"ht","label":"htb","optional":true},{"field":"ut","label":"utb","dependsOn":["fza","hst","ht"],"optional":true}]}'
         - name: host
           value: "dat-demo-db-mysql"
         - name: port
@@ -148,7 +149,7 @@ grases:
       name: dat-demo
       runimages:
         image: grpl/gruim
-        tag: "0.3.64.pr-197"
+        tag: "0.3.64"
       ssl: true
       sslissuer: letsencrypt-grapple-demo
       autoscaling:
@@ -166,7 +167,7 @@ grases:
       name: dat-demo-cache
       runimages:
         image: grpl/loopback
-        tag: "0.4.28"
+        tag: "0.4.31"
       discoveredrepos: false
       ingress: true
       ssl: true
@@ -240,7 +241,7 @@ grases:
       name: dat-demo-cache
       runimages:
         image: grpl/gruim
-        tag: "0.3.64.pr-197"
+        tag: "0.3.64"
       ssl: true
       sslissuer: letsencrypt-grapple-demo
       autoscaling:
