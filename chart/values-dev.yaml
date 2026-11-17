@@ -13,6 +13,8 @@ grases:
     grapi:
       ssl: false
       autorestartgruim: false
+    gruim:
+      ssl: false
 
 
 ingress:

@@ -7,11 +7,54 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 - Generated gruim cascading vehicle search: `FZA → HST → OTG → HT → UT`
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
+- Multi table search: a dealer drilldown across three tables,
+  `country → city → dealer`
 - A browse tab that embeds the cache-layer gruim admin module for `datecode2`
+- AI search: the vehicle drilldown with an AI search box that picks the
+  filters from a plain-language query
+- AI Chat: gruim's AI-Chat module, answering questions about the catalogue
+  through the cache layer's read-only MCP server
 
 Vehicle queries go through the Redis-backed layer-two API, which caches layer
 one's OpenAPI proxy. The generated search and admin modules, fuzzy search and
 vehicle lists all use this cache layer.
+
+## AI search and AI Chat
+
+Both AI tabs use the cache layer's MCP server `dat-search`. It is read-only and
+limited to the vehicle drilldown: `MCP_CONFIGS` in
+`chart/templates/dat-config.yaml` (and the `dat-cache-api` service in
+`docker-compose.yaml`) is
+
+```json
+{"dat-search":{"enable":true,"defaultInclude":"GET:dsearchtree/drilldowns/vehicle,GET:dsearchtree/drilldowns/vehicle/*"}}
+```
+
+so the model can only read the drilldown description and its levels, never
+write or read anything else. grapi serves it at `<cache grapi>/mcp/dat-search`.
+
+- **AI search** (`src/AiSearch.svelte`) mounts `AppCache/dsearchtreeDatecode2`
+  like Guided search, plus `aiSearch: "vehicle"`. The user types what they look
+  for, the AI picks the drilldown values, and the filters stay editable by hand.
+  gruim reads the settings for the box from `ai-search.vehicle` in the
+  cache-layer gruim `config` in `chart/values.yaml` (its
+  `SVELTE_APP_CUSTOM_CONFIG`): the drilldown, the MCP server and the
+  `guidelines`, a glossary of the DAT levels with examples.
+- **AI Chat** (`src/AiChat.svelte`) mounts gruim's AI-Chat module
+  (`AppCache/AI-Chat`) unchanged, with `mcpEndpoint` set to the MCP server and
+  the same glossary as `additionalMcpGuidelines`. gruim only exposes AI-Chat
+  when the cache API's OpenAPI document has an `/mcp` path, i.e. with
+  `MCP_CONFIGS` set. The endpoint is the relative `/mcp/dat-search`, the same
+  path AI-Chat discovers in that document, so it reaches the server through
+  the cache-layer gruim's `/api` proxy and is listed once.
+
+The glossary lives twice: `vehicleAiGuidelines` in `src/aiSearchConfig.ts` and
+the JSON-escaped copy in `chart/values.yaml`. Keep them in sync.
+
+Bring your own key: there is no server-side provider key. Each user picks a
+provider and model and enters their own API key in the browser. The key is
+stored only in that browser (localStorage) and sent only to the provider; the
+MCP server never sees it.
 
 ## Project structure
 
@@ -67,15 +110,66 @@ anything that has been shared in plain text.
 
 The Grapple backend configuration lives in `chart/values.yaml`: the datasource
 shape, discovery and REST CRUD configuration, the fuzzy search configuration,
-and the nine SQL controllers.
+and the drilldowns (`drilldownconfigs`). Each level names the model it reads
+(`model`), the column holding its value (`keyColumn`) and its text
+(`displayColumn`), its dropdown heading (`title`), the levels that narrow it
+together with the column each one filters (`parents`), and whether its
+dropdown is a multi-select (`multiselect`); grapi generates the endpoints from it, so
+there is no SQL to write. The `vehicle` drilldown declares the five levels
+`fza → hst → otg → ht → ut`, all on `Datecode2`:
 
-The frontend side of that is `src/vehicleSearchConfig.ts`: it describes the
-five dependent Guided search dropdowns and the independent optional filters
-used by Description search. Both tabs read it, so a change to the search
-normally means editing that one file. `src/TreeSearch.svelte` and
-`src/FuzzySearch.svelte` only pass it on, together with the options that differ between the
-two (the search input, the fixed operation parameters, the page size), and
-`src/GeneratedSearch.svelte` mounts the module and tears it down again.
+```yaml
+- name: hst
+  model: Datecode2
+  keyColumn: hst
+  displayColumn: hstb
+  title: Manufacturer (HST)
+  parents: [{level: fza, column: fza}]
+  multiselect: {enable: true}
+```
+
+Every level of both drilldowns is a multi-select (`multiselect: {enable: true}`):
+the user can pick several values, shown as chips, and "None" can be picked
+together with values. `multiselect.maxLimit` caps the picks per dropdown
+(default 100, at most 500; grapi answers a request carrying more with 400), and
+gruim refuses to send a request whose query string would exceed about 6 KB
+("Too many selections — remove some"), so very long selections are capped
+automatically even below `maxLimit`.
+
+The `dealers` drilldown spans three tables, each level its own model, linked by
+foreign keys:
+
+```yaml
+- {name: country, model: Country, keyColumn: id, displayColumn: name, title: Country,
+   multiselect: {enable: true}}
+- {name: city, model: City, keyColumn: id, displayColumn: name, title: City,
+   parents: [{level: country, column: countryId}], multiselect: {enable: true}}
+- {name: dealer, model: Dealer, keyColumn: id, displayColumn: name, title: Dealer,
+   parents: [{level: city, column: cityId}, {level: country, column: countryId}],
+   multiselect: {enable: true}}
+```
+
+A dealer names its country as well as its city: online dealers have no city,
+so choosing a country and then City "None" lists that country's online dealers.
+
+The result table under the dropdowns is always the model of the bottom (last)
+level: the bottom level filters it on its own `keyColumn`, every other level on
+the column the bottom level lists for it in `parents` (here Dealer is filtered
+on `countryId`, `cityId` and `id`). A level the bottom level does not list only
+narrows the dropdowns, and grapi warns about it at startup.
+
+The frontend side of that is `src/vehicleSearchConfig.ts` and
+`src/dealerSearchConfig.ts`: they name the drilldowns and give the result
+columns their headings. The gruim modules read the levels, headings included,
+from grapi, so adding, renaming or reordering a level means editing
+`drilldownconfigs` only. `src/TreeSearch.svelte` and `src/FuzzySearch.svelte`
+pass the vehicle drilldown on, together with the handful of options that differ between
+the two (the search input, the fixed operation parameters, the page size), and
+`src/GeneratedSearch.svelte` mounts the module and tears it down again. The
+Multi table search tab (`src/MultiTableSearch.svelte`) mounts the generated
+Dealer module (`AppCache/dsearchtreeDealer`) with the `dealers` drilldown, so
+choosing a country and a city narrows the dealer list by `countryId` and
+`cityId`.
 
 ## Local frontend development
 
@@ -90,7 +184,7 @@ pnpm dev
 The frontend is available at <http://localhost:4000>.
 `SVELTE_APP_API_URL` must point to the cached API including its `/dsearchtree`
 prefix. `SVELTE_APP_TREE_API_URL` is an optional direct-API override and is
-empty by default. The Guided search and All vehicles tabs additionally require
+empty by default. The Guided search, Multi table search, All vehicles, AI search and AI Chat tabs additionally require
 the generated cache-layer gruim remote, which this frontend-only workflow does
 not start.
 
@@ -107,10 +201,12 @@ The layer-one DAT API is available at <http://localhost:3333>, the Redis-backed
 layer-two proxy at <http://localhost:3334>, and the demo UI at
 <http://localhost:4000>. The first API startup generates the LoopBack models and
 controllers and can take approximately two minutes. Layer two uses layer one's
-internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
+internal OpenAPI URL, caches responses for 6,000,000 ms, and serves the read-only `dat-search` MCP
+server at <http://localhost:3334/mcp/dat-search>.
 
 Docker Compose does not start either gruim service. The Guided search and browse
-tabs load `AppCache/dsearchtreeDatecode2` from the cache-layer gruim over module
+and AI search tabs load `AppCache/dsearchtreeDatecode2`, the Multi table search tab
+`AppCache/dsearchtreeDealer` and the AI Chat tab `AppCache/AI-Chat`, from the cache-layer gruim over module
 federation, so they are unavailable in this standalone Docker setup. The module
 is imported on demand and the tabs report a clear error when the remote is
 absent. Description-search requests still go to the cached grapi through the
@@ -118,15 +214,33 @@ absent. Description-search requests still go to the cached grapi through the
 
 ## API behavior
 
-Both API layers use `grpl/loopback:0.4.28`. This release preserves SQL-controller
-parameters through the cache layer, prevents duplicate `where` parameters and
-applies fuzzy matching before pagination. `RestDefaultLimit=1000` gives
-unpaginated REST list calls a safe default on both layers.
+Both API layers use `grpl/loopback:0.4.31.pr-480`. This release generates the
+drilldown endpoints, preserves query parameters through the cache layer,
+prevents duplicate `where` parameters and applies fuzzy matching before
+pagination. `RestDefaultLimit=1000` gives unpaginated REST list calls a safe
+default on both layers.
 
-The generated Guided search module narrows `FZA → HST → OTG → HT → UT` through
-dependent SQL-controller filters. Description search provides the same criteria
-as independent optional type-ahead filters. Gruim resolves their values into
-`sqlParams` and applies the selected criteria to the repository filter.
+The guided and description-search modules narrow `FZA → HST → OTG → HT → UT`
+through grapi's vehicle drilldown. grapi serves `GET /drilldowns/vehicle`, which
+describes the levels, and one `GET /drilldowns/vehicle/<level>` per level,
+taking the selected parent values as query parameters named after the parent
+levels (e.g. `?fza=1&hst=130`; several picked values repeat the parameter,
+e.g. `?fza=1&fza=2`) and returning `{ items: [{ value, label }], next }`
+one page at a time, with `next` as the cursor for the following page. The
+`dealers` drilldown works the same way at `/drilldowns/dealers/<level>`, e.g.
+`/drilldowns/dealers/city?country=1`. When some rows have no value in a
+level (a vehicle without an OTG, a city without a country, a dealer without a
+city), its first page starts with a "— None —" entry (`{ value: null, none: true }`);
+choosing it asks the levels below for those rows by naming the level in the
+`nulls` parameter (e.g. `nulls=otg`). In a multi-select "None" can be picked
+together with values (e.g. `nulls=otg&otg=3`), which asks for rows where the
+level is empty or one of the values. Each dropdown searches as the user types (`q`): the
+database matches the label or the code, and grapi ranks the matches, so typos
+like `bwm` still find BMW. Every request is bounded, whatever the table size: at
+most 1,000 values, a 5-second query timeout, and at most 10 drilldown queries at
+once per grapi instance, with further requests queued briefly. Gruim applies the
+selected values to the repository filter. The cache layer serves the endpoints
+under `/dsearchtree/drilldowns/...` and caches successful answers in Redis.
 
 Fuzzy search uses
 `/dsearchtree/dsearchtrees/datecode2s/fuzzy/{searchTerm}` through the cache

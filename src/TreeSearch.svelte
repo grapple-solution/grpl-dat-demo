@@ -2,7 +2,7 @@
   import GeneratedSearch from "./GeneratedSearch.svelte";
   import { adminModuleCss } from "./gruimTheme";
   import {
-    vehicleDistinctFilters,
+    vehicleDrilldown,
     vehicleFilterTranslation,
     vehicleSearchSchema,
   } from "./vehicleSearchConfig";
@@ -14,8 +14,8 @@
   load={() => import("AppCache/dsearchtreeDatecode2")}
   props={{
     css: adminModuleCss,
-    // the drill-down itself; see src/vehicleSearchConfig.ts
-    distinctFilters: vehicleDistinctFilters,
+    // the drill-down is served by grapi; see src/vehicleSearchConfig.ts
+    drilldown: vehicleDrilldown,
     translation: vehicleFilterTranslation,
     schema: {
       "primary-key": "dateCode",

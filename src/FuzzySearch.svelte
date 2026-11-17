@@ -2,7 +2,7 @@
   import GeneratedSearch from "./GeneratedSearch.svelte";
   import { adminModuleCss } from "./gruimTheme";
   import {
-    vehicleIndependentFilters,
+    vehicleDrilldown,
     vehicleFilterTranslation,
     vehicleSearchSchema,
   } from "./vehicleSearchConfig";
@@ -27,7 +27,8 @@
     parameters: { useGlobalSearch: false },
     // the fuzzy operation returns { item, ... } per hit
     resultPath: "item",
-    distinctFilters: vehicleIndependentFilters,
+    // narrows the search with the grapi drill-down; see src/vehicleSearchConfig.ts
+    drilldown: vehicleDrilldown,
     // rows per "Load More"
     pageSize: 100,
     translation: vehicleFilterTranslation,

@@ -2,8 +2,11 @@
   import TreeSearch from "./TreeSearch.svelte";
   import FuzzySearch from "./FuzzySearch.svelte";
   import BrowseTable from "./BrowseTable.svelte";
+  import MultiTableSearch from "./MultiTableSearch.svelte";
+  import AiSearch from "./AiSearch.svelte";
+  import AiChat from "./AiChat.svelte";
 
-  type View = "tree" | "fuzzy" | "browse";
+  type View = "tree" | "fuzzy" | "multi" | "browse" | "ai-search" | "ai-chat";
 
   let view: View = "tree";
 </script>
@@ -29,8 +32,17 @@
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'fuzzy' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
           on:click={() => view = "fuzzy"}>Description search</button>
         <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'multi' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "multi"}>Multi table search</button>
+        <button
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'browse' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
           on:click={() => view = "browse"}>All vehicles</button>
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'ai-search' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "ai-search"}>AI search</button>
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'ai-chat' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "ai-chat"}>AI Chat</button>
       </nav>
     </div>
   </header>
@@ -40,6 +52,12 @@
       <TreeSearch />
     {:else if view === "fuzzy"}
       <FuzzySearch />
+    {:else if view === "multi"}
+      <MultiTableSearch />
+    {:else if view === "ai-search"}
+      <AiSearch />
+    {:else if view === "ai-chat"}
+      <AiChat />
     {:else}
       <section aria-labelledby="browse-title">
         <div class="mb-7 max-w-2xl">

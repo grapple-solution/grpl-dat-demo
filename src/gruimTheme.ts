@@ -25,6 +25,13 @@ export const adminModuleCss = `
   --list-background: rgb(var(--dat-surface));
   --placeholder-color: rgb(var(--dat-muted));
   --selected-item-color: rgb(var(--dat-ink));
+  /* multi-select chips: svelte-select's light defaults (#ebedef) would sit
+     under the dark-mode ink and make the chosen values unreadable */
+  --multi-item-bg: rgb(var(--dat-accent-soft));
+  --multi-item-color: rgb(var(--dat-ink));
+  --multi-item-outline: 1px solid rgb(var(--dat-line-strong));
+  --multi-item-active-outline: 1px solid rgb(var(--dat-accent));
+  --multi-item-clear-icon-color: rgb(var(--dat-muted));
 }
 
 #admin-list-table {
@@ -318,3 +325,14 @@ input[type="checkbox"][class*="accent-primary"],
   border-color: rgb(var(--dat-line-strong)) !important;
 }
 `;
+
+/**
+ * The theme variables of `adminModuleCss` alone, for modules without a `css`
+ * prop (AI-Chat): set on a wrapper element they reach its inputs by
+ * inheritance, so its credentials section matches the dropdowns.
+ */
+export const themeVariables = adminModuleCss
+  .slice(0, adminModuleCss.indexOf("}"))
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/\s+/g, " ")
+  .trim();
