@@ -1,26 +1,14 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import TreeSearch from "./TreeSearch.svelte";
   import FuzzySearch from "./FuzzySearch.svelte";
   import BrowseTable from "./BrowseTable.svelte";
-  import { loadVehicleTypes, errorMessage, type Option } from "./api";
+  import MultiTableSearch from "./MultiTableSearch.svelte";
+  import AiSearch from "./AiSearch.svelte";
+  import AiChat from "./AiChat.svelte";
 
-  type View = "tree" | "fuzzy" | "browse";
+  type View = "tree" | "fuzzy" | "multi" | "browse" | "ai-search" | "ai-chat";
 
   let view: View = "tree";
-  let vehicleTypes: Option[] = [];
-  let initialLoading = true;
-  let startupError = "";
-
-  onMount(async () => {
-    try {
-      vehicleTypes = await loadVehicleTypes();
-    } catch (error) {
-      startupError = errorMessage(error);
-    } finally {
-      initialLoading = false;
-    }
-  });
 </script>
 
 <svelte:head><title>DAT vehicle catalogue</title></svelte:head>
@@ -44,24 +32,32 @@
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'fuzzy' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
           on:click={() => view = "fuzzy"}>Description search</button>
         <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'multi' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "multi"}>Multi table search</button>
+        <button
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'browse' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
           on:click={() => view = "browse"}>All vehicles</button>
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'ai-search' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "ai-search"}>AI search</button>
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'ai-chat' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "ai-chat"}>AI Chat</button>
       </nav>
     </div>
   </header>
 
   <div class="w-full px-6 py-10">
-    {#if startupError}
-      <div role="alert" class="mb-8 flex items-start gap-3 rounded-xl border border-app-danger/30 bg-app-danger-soft px-4 py-3 text-sm text-app-danger">
-        <span class="mt-0.5 font-semibold">Vehicle data is unavailable</span>
-        <span class="text-app-danger/80">{startupError}</span>
-      </div>
-    {/if}
-
     {#if view === "tree"}
-      <TreeSearch {vehicleTypes} {initialLoading} />
+      <TreeSearch />
     {:else if view === "fuzzy"}
-      <FuzzySearch {vehicleTypes} {initialLoading} />
+      <FuzzySearch />
+    {:else if view === "multi"}
+      <MultiTableSearch />
+    {:else if view === "ai-search"}
+      <AiSearch />
+    {:else if view === "ai-chat"}
+      <AiChat />
     {:else}
       <section aria-labelledby="browse-title">
         <div class="mb-7 max-w-2xl">

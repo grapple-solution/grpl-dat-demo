@@ -1,6 +1,6 @@
 services:
   dat-api:
-    image: grpl/loopback:0.4.28
+    image: grpl/loopback:0.4.31.pr-480
     command: ["/bin/sh", "-c", "./start.sh"]
     ports:
       - "3333:3000"
@@ -18,16 +18,9 @@ services:
         dsearchtree:{"dataSource":"dsearchtree","schema":"${DAT_DB_NAME:-dsearchtree}","all":"true","disableCamelCase":false}
       RestCruds: >-
         dsearchtree:{"datasource":"dsearchtree"}
-      SQLController: >-
-        vehicleTypes:{"query":"select FZA, FZAB from dsearchtree.datecode2 group by FZA, FZAB order by FZA;","path":"vehicleTypes","controllerName":"vehicleTypes"}|
-        brands:{"query":"select HST, HSTB from dsearchtree.datecode2 where HSTB like \"$${nameQuery}\" group by HST, HSTB union select HST, HSTB from dsearchtree.datecode2 where HST = \"$${codeQuery}\" group by HST, HSTB order by HSTB limit 50;","path":"brands","controllerName":"brands"}|
-        modelRanges:{"query":"select OTG, OTGB from dsearchtree.datecode2 where OTGB like \"$${nameQuery}\" group by OTG, OTGB union select OTG, OTGB from dsearchtree.datecode2 where OTG like \"$${codeQuery}\" group by OTG, OTGB order by OTGB limit 50;","path":"modelRanges","controllerName":"modelRanges"}|
-        modelGroups:{"query":"select HT, HTB from dsearchtree.datecode2 where HTB like \"$${nameQuery}\" group by HT, HTB union select HT, HTB from dsearchtree.datecode2 where HT = \"$${codeQuery}\" group by HT, HTB order by HTB limit 50;","path":"modelGroups","controllerName":"modelGroups"}|
-        models:{"query":"select UT, UTB from dsearchtree.datecode2 where UTB like \"$${nameQuery}\" group by UT, UTB union select UT, UTB from dsearchtree.datecode2 where UT = \"$${codeQuery}\" group by UT, UTB order by UTB limit 50;","path":"models","controllerName":"models"}|
-        brandsByVehicleType:{"query":"select FZA, HST, HSTB from dsearchtree.datecode2 where FZA = \"$${FZA}\" group by FZA, HST, HSTB order by FZA, HSTB;","path":"brandsByVehicleType","controllerName":"brandsByVehicleType"}|
-        modelRangeByVehicleTypeAndManufacturer:{"query":"select FZA, HST, HSTB, OTG, OTGB from dsearchtree.datecode2 where FZA = \"$${FZA}\" and HST = \"$${HST}\" group by FZA, HST, HSTB, OTG, OTGB order by FZA, OTGB;","path":"modelRangeByVehicleTypeAndManufacturer","controllerName":"modelRangeByVehicleTypeAndManufacturer"}|
-        modelGroupByVehicleTypeAndManufacturerAndModelRange:{"query":"select FZA, HST, HSTB, OTG, OTGB, HT, HTB from dsearchtree.datecode2 where FZA = \"$${FZA}\" and HST = \"$${HST}\" and OTG = \"$${OTG}\" group by FZA, HST, HSTB, OTG, OTGB, HT, HTB order by FZA, HSTB, OTGB;","path":"modelGroupByVehicleTypeAndManufacturerAndModelRange","controllerName":"modelGroupByVehicleTypeAndManufacturerAndModelRange"}|
-        modelByVehicleTypeAndManufacturerAndModelGroup:{"query":"select FZA, HST, HSTB, HT, HTB, UT, UTB from dsearchtree.datecode2 where FZA = \"$${FZA}\" and HST = \"$${HST}\" and HT = \"$${HT}\" group by FZA, HST, HSTB, HT, HTB, UT, UTB order by FZA, HSTB;","path":"modelByVehicleTypeAndManufacturerAndModelGroup","controllerName":"modelByVehicleTypeAndManufacturerAndModelGroup"}
+      # the vehicle and dealers drilldowns, the same as drilldownconfigs in chart/values.yaml
+      DrilldownConfig: >-
+        vehicle:{"levels":[{"name":"fza","model":"Datecode2","keyColumn":"fza","displayColumn":"fzab","title":"Vehicle type (FZA)","multiselect":{"enable":true}},{"name":"hst","model":"Datecode2","keyColumn":"hst","displayColumn":"hstb","title":"Manufacturer (HST)","multiselect":{"enable":true},"parents":[{"level":"fza","column":"fza"}]},{"name":"otg","model":"Datecode2","keyColumn":"otg","displayColumn":"otgb","title":"Model range (OTG)","multiselect":{"enable":true},"parents":[{"level":"fza","column":"fza"},{"level":"hst","column":"hst"}]},{"name":"ht","model":"Datecode2","keyColumn":"ht","displayColumn":"htb","title":"Model group (HT)","multiselect":{"enable":true},"parents":[{"level":"fza","column":"fza"},{"level":"hst","column":"hst"},{"level":"otg","column":"otg"}]},{"name":"ut","model":"Datecode2","keyColumn":"ut","displayColumn":"utb","title":"Model (UT)","multiselect":{"enable":true},"parents":[{"level":"fza","column":"fza"},{"level":"hst","column":"hst"},{"level":"otg","column":"otg"},{"level":"ht","column":"ht"}]}]}|dealers:{"levels":[{"name":"country","model":"Country","keyColumn":"id","displayColumn":"name","title":"Country","multiselect":{"enable":true}},{"name":"city","model":"City","keyColumn":"id","displayColumn":"name","title":"City","multiselect":{"enable":true},"parents":[{"level":"country","column":"countryId"}]},{"name":"dealer","model":"Dealer","keyColumn":"id","displayColumn":"name","title":"Dealer","multiselect":{"enable":true},"parents":[{"level":"city","column":"cityId"},{"level":"country","column":"countryId"}]}]}
       FuzzySearchConfig: >-
         dsearchtree:{"fuzzy":true,"centralFuzzy":false,"datasource":"dsearchtree","databaseName":"dsearchtree","appName":"Grpl","include":"datecode2","subPath":""}
       LoggingConfigs: >-
@@ -40,7 +33,7 @@ services:
       start_period: 120s
 
   dat-cache-api:
-    image: grpl/loopback:0.4.28
+    image: grpl/loopback:0.4.31.pr-480
     command: ["/bin/sh", "-c", "./start.sh"]
     ports:
       - "3334:3000"
@@ -55,7 +48,7 @@ services:
         dsearchtree:{"redisDS":"redisDS","cacheTTL":6000000}
       LoggingConfigs: >-
         dsearchtree:{"loglevel":"info","httplog":true,"global":true,"group":"logging"}
-      MCP_CONFIGS: '{"enable":true}'
+      MCP_CONFIGS: '{"dat-search":{"enable":true,"defaultInclude":"GET:dsearchtree/drilldowns/vehicle,GET:dsearchtree/drilldowns/vehicle/*"}}'
     depends_on:
       dat-api:
         condition: service_healthy
