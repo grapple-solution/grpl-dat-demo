@@ -48,7 +48,7 @@ services:
         dsearchtree:{"redisDS":"redisDS","cacheTTL":6000000}
       LoggingConfigs: >-
         dsearchtree:{"loglevel":"info","httplog":true,"global":true,"group":"logging"}
-      MCP_CONFIGS: '{"dat-search":{"enable":true,"defaultInclude":"GET:dsearchtree/drilldowns/vehicle,GET:dsearchtree/drilldowns/vehicle/*"}}'
+      MCP_CONFIGS: '{"dat-search":{"enable":true,"defaultInclude":"GET:dsearchtree/drilldowns/vehicle,GET:dsearchtree/drilldowns/vehicle/*,GET:dsearchtree/datecode2s/count"}}'
     depends_on:
       dat-api:
         condition: service_healthy

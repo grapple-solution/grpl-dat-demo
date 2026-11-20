@@ -1,7 +1,7 @@
 <script lang="ts">
   import GeneratedSearch from "./GeneratedSearch.svelte";
   import { adminModuleCss } from "./gruimTheme";
-  import { vehicleAiSearch } from "./aiSearchConfig";
+  import { vehicleAiDrilldown } from "./aiDrilldownConfig";
   import {
     vehicleDrilldown,
     vehicleFilterTranslation,
@@ -18,8 +18,8 @@
     // the same drilldown as Guided search; see src/vehicleSearchConfig.ts
     drilldown: vehicleDrilldown,
     // the AI search box: gruim reads its MCP server and guidelines from
-    // `ai-search.vehicle` in its config (chart/values.yaml)
-    aiSearch: vehicleAiSearch,
+    // `ai-drilldown.vehicle` in its config (chart/values.yaml)
+    aiDrilldown: vehicleAiDrilldown,
     translation: vehicleFilterTranslation,
     schema: {
       "primary-key": "dateCode",

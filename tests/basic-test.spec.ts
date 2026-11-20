@@ -476,7 +476,7 @@ test('AI search mounts the drilldown module with its AI search box config', asyn
   await expect(page.getByRole('heading', { name: 'Search with AI' })).toBeVisible();
 
   // the same vehicle drilldown as Guided search, so the filters stay adjustable
-  // by hand after the AI has picked them. The AI search box itself (aiSearch:
+  // by hand after the AI has picked them. The AI search box itself (aiDrilldown:
   // "vehicle") is gruim markup driven by its own config and a provider key, so
   // only the module mounting is checked here.
   await expect(page.getByPlaceholder(T.fza, { exact: true })).toHaveCount(1);
