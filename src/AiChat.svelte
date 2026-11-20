@@ -1,6 +1,6 @@
 <script lang="ts">
   import GeneratedSearch from "./GeneratedSearch.svelte";
-  import { aiMcpEndpoint, vehicleAiGuidelines } from "./aiSearchConfig";
+  import { catalogueAiChat } from "./aiDrilldownConfig";
   import { themeVariables } from "./gruimTheme";
 </script>
 
@@ -12,13 +12,10 @@
   description="Ask questions about the DAT vehicle catalogue. The AI looks the answers up through the read-only vehicle drilldown."
   load={() => import("AppCache/AI-Chat")}
   props={{
-    // the cache layer's read-only MCP server; see src/aiSearchConfig.ts
-    mcpEndpoint: aiMcpEndpoint,
-    additionalMcpGuidelines: { [aiMcpEndpoint]: vehicleAiGuidelines },
-    // provider, model and the user's own API key, kept in their browser
-    showSettings: true,
-    // credentials first, collapsed once saved, as in the AI search tab
-    settingsLayout: "collapsible",
+    // MCP server, guidelines and the settings panel come from
+    // `ai-chat.catalogue` in the cache-layer gruim config (chart/values.yaml);
+    // the provider API key stays the user's own, in their browser
+    aiChat: catalogueAiChat,
   }}
 />
 </div>

@@ -9,5 +9,5 @@ stringData:
   host: {{ printf "%s-redis-redis" .Values.redis.clusterName | quote }}
   port: "6379"
   db: "0"
-  MCP_CONFIGS: '{"dat-search":{"enable":true,"defaultInclude":"GET:dsearchtree/drilldowns/vehicle,GET:dsearchtree/drilldowns/vehicle/*"}}'
+  MCP_CONFIGS: '{"dat-search":{"enable":true,"defaultInclude":"GET:dsearchtree/drilldowns/vehicle,GET:dsearchtree/drilldowns/vehicle/*,GET:dsearchtree/datecode2s/count"}, "dat-mcp":{"enable":true}}'
   LoggingConfigs: 'dsearchtree:{"loglevel":"info","httplog":true,"global":true,"group":"logging"}'

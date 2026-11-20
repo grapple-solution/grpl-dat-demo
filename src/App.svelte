@@ -3,10 +3,10 @@
   import FuzzySearch from "./FuzzySearch.svelte";
   import BrowseTable from "./BrowseTable.svelte";
   import MultiTableSearch from "./MultiTableSearch.svelte";
-  import AiSearch from "./AiSearch.svelte";
+  import AiDrilldown from "./AiDrilldown.svelte";
   import AiChat from "./AiChat.svelte";
 
-  type View = "tree" | "fuzzy" | "multi" | "browse" | "ai-search" | "ai-chat";
+  type View = "tree" | "fuzzy" | "multi" | "browse" | "ai-drilldown" | "ai-chat";
 
   let view: View = "tree";
 </script>
@@ -38,8 +38,8 @@
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'browse' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
           on:click={() => view = "browse"}>All vehicles</button>
         <button
-          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'ai-search' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
-          on:click={() => view = "ai-search"}>AI search</button>
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'ai-drilldown' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "ai-drilldown"}>AI search</button>
         <button
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'ai-chat' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
           on:click={() => view = "ai-chat"}>AI Chat</button>
@@ -54,8 +54,8 @@
       <FuzzySearch />
     {:else if view === "multi"}
       <MultiTableSearch />
-    {:else if view === "ai-search"}
-      <AiSearch />
+    {:else if view === "ai-drilldown"}
+      <AiDrilldown />
     {:else if view === "ai-chat"}
       <AiChat />
     {:else}

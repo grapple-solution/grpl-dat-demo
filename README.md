@@ -27,19 +27,38 @@ limited to the vehicle drilldown: `MCP_CONFIGS` in
 `docker-compose.yaml`) is
 
 ```json
-{"dat-search":{"enable":true,"defaultInclude":"GET:dsearchtree/drilldowns/vehicle,GET:dsearchtree/drilldowns/vehicle/*"}}
+{"dat-search":{"enable":true,"defaultInclude":"GET:dsearchtree/drilldowns/vehicle,GET:dsearchtree/drilldowns/vehicle/*,GET:dsearchtree/datecode2s/count"}}
 ```
 
-so the model can only read the drilldown description and its levels, never
-write or read anything else. grapi serves it at `<cache grapi>/mcp/dat-search`.
+so the model can only read the drilldown description, its levels and how
+many vehicles a `where` matches (`datecode2s/count`), never write or read
+anything else. grapi serves it at `<cache grapi>/mcp/dat-search`.
 
-- **AI search** (`src/AiSearch.svelte`) mounts `AppCache/dsearchtreeDatecode2`
-  like Guided search, plus `aiSearch: "vehicle"`. The user types what they look
+- **AI search** (`src/AiDrilldown.svelte`) mounts `AppCache/dsearchtreeDatecode2`
+  like Guided search, plus `aiDrilldown: "vehicle"`. The user types what they look
   for, the AI picks the drilldown values, and the filters stay editable by hand.
-  gruim reads the settings for the box from `ai-search.vehicle` in the
+  gruim reads the settings for the box from `ai-drilldown.vehicle` in the
   cache-layer gruim `config` in `chart/values.yaml` (its
   `SVELTE_APP_CUSTOM_CONFIG`): the drilldown, the MCP server and the
-  `guidelines`, a glossary of the DAT levels with examples.
+  `guidelines`. The guidelines are a glossary of the DAT domain only: what the
+  levels and the result columns mean, their units, and example queries. They
+  give no step-by-step instructions; gruim passes the same text to both phases
+  below as background, and its own prompts say what each phase does.
+  The AI works in two phases:
+  1. It picks the drilldown values. Whatever no level expresses (e.g. `1.4`,
+     `148 hp`) is listed as "Not applied".
+  2. Only if something was not applied: a second run turns those words into
+     extra conditions on any column of the result table (`Datecode2`, e.g.
+     `ccm`, `kw`, `aZyl`, `avMoB`, `avGeB`), through grapi's generated
+     `GET /drilldowns/vehicle/models/Datecode2` (any-column `where`); no
+     per-column config.
+  The table then switches between **Best matches (N)** (drilldown + extra
+  conditions) and **Broader matches (N)** (drilldown only). `CCM`/`KW`/`AZYL`
+  are varchar in the dump: grapi compares a number range on a text column
+  numerically, so `{"ccm":{"between":[1350,1449]}}` works without changing the
+  table. This needs grapi with the numeric range patch and the model endpoint
+  (feature/GSF-229-drilldown-pagination, 18c1087 or newer) and gruim with the
+  two-phase AI drilldown (e806904 or newer).
 - **AI Chat** (`src/AiChat.svelte`) mounts gruim's AI-Chat module
   (`AppCache/AI-Chat`) unchanged, with `mcpEndpoint` set to the MCP server and
   the same glossary as `additionalMcpGuidelines`. gruim only exposes AI-Chat
@@ -48,8 +67,11 @@ write or read anything else. grapi serves it at `<cache grapi>/mcp/dat-search`.
   path AI-Chat discovers in that document, so it reaches the server through
   the cache-layer gruim's `/api` proxy and is listed once.
 
-The glossary lives twice: `vehicleAiGuidelines` in `src/aiSearchConfig.ts` and
-the JSON-escaped copy in `chart/values.yaml`. Keep them in sync.
+Both tabs are configured only in the cache-layer gruim `config` in
+`chart/values.yaml`: `ai-drilldown.vehicle` (AI search, via the `aiDrilldown`
+prop) and `ai-chat.catalogue` (AI Chat, via the `aiChat` prop). The glossary is
+each entry's guidelines; AI Chat needs a gruim image with `aiChat` support
+(gruim 3cbe056 or newer).
 
 Bring your own key: there is no server-side provider key. Each user picks a
 provider and model and enters their own API key in the browser. The key is
